@@ -330,6 +330,14 @@ tutStep:0,tutDone:false,companions:[],
 worldSeed:Math.floor(Math.random()*999999),invSort:'name'};
 
 const TILE=48;let canvas,ctx,W,H,animFrame=0,lastTime=0,audioCtx=null;
+// Spatial grid for fast lookups (cell size 200px)
+const CELL=200;let spatialGrid={};
+function rebuildSpatial(){spatialGrid={};G.worldObjects.forEach((o,i)=>{const k=Math.floor(o.x/CELL)+','+Math.floor(o.y/CELL);(spatialGrid[k]=spatialGrid[k]||[]).push(o)})}
+function getNearby(px,py,radius){const results=[];const cr=Math.ceil(radius/CELL);const cx=Math.floor(px/CELL),cy=Math.floor(py/CELL);for(let dy=-cr;dy<=cr;dy++)for(let dx=-cr;dx<=cr;dx++){const cell=spatialGrid[(cx+dx)+','+(cy+dy)];if(cell)for(const o of cell){const ddx=o.x-px,ddy=o.y-py;if(ddx*ddx+ddy*ddy<radius*radius)results.push(o)}}return results}
+// Minimap cache
+let minimapDirty=true,minimapFrame=0;
+// Floating text particles
+const floatingTexts=[];
 
 // ══════════════════════════════════════════════════════════
 //  1. SOUND SYSTEM (Web Audio API)
@@ -391,8 +399,8 @@ function generateWorld(){
   addObj('worldmap',100,60,'🌍','World Map','worlds');
   addObj('agenda',-100,60,'📋','Agenda Board','agenda');
   addObj('chest',60,80,'📦','Storage Chest','chest');
-  // Trees, rocks, plants
-  for(let i=0;i<8000;i++){
+  // Trees, rocks, plants (reduced count, spatial grid)
+  for(let i=0;i<4000;i++){
     const wx=Math.random()*W*TILE,wy=Math.random()*H*TILE;
     const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);if(tx<0||tx>=W||ty<0||ty>=H)continue;
     const biome=G.worldTiles[ty*W+tx],bd=BIOME_DATA[biome];if(!bd)continue;
@@ -404,19 +412,23 @@ function generateWorld(){
   }
   // 8. NPCs roaming
   RIVALS.forEach((r,i)=>{const angle=Math.random()*Math.PI*2,dist=800+Math.random()*2000;G.npcs.push({...r,x:G.px+Math.cos(angle)*dist,y:G.py+Math.sin(angle)*dist,idx:i,moveTimer:0,moveDir:Math.random()*Math.PI*2});});
+  rebuildSpatial();
 }
 
 // ══════════════════════════════════════════════════════════
 //  GAME LOOP
 // ══════════════════════════════════════════════════════════
 function initCanvas(){canvas=document.getElementById('gameCanvas');ctx=canvas.getContext('2d');resize();window.addEventListener('resize',resize)}
-function resize(){W=window.innerWidth;H=window.innerHeight;canvas.width=W;canvas.height=H}
+function resize(){W=window.innerWidth;H=window.innerHeight;canvas.width=W;canvas.height=H;minimapDirty=true}
 
 function gameLoop(ts){
-  const dt=Math.min((ts-lastTime)/1000,.05);lastTime=ts;animFrame++;
+  const dt=Math.min((ts-lastTime)/1000,.033);lastTime=ts;animFrame++;
   update(dt);render();
+  // Floating text update
+  for(let i=floatingTexts.length-1;i>=0;i--){floatingTexts[i].t-=dt;floatingTexts[i].y-=30*dt;if(floatingTexts[i].t<=0)floatingTexts.splice(i,1)}
   requestAnimationFrame(gameLoop);
 }
+function addFloatingText(x,y,text,color){floatingTexts.push({x,y,text,color,t:.8})}
 
 function update(dt){
   // Movement
@@ -424,18 +436,26 @@ function update(dt){
   if(G.keys.ArrowUp||G.keys.KeyW||G.keys.w)my=-1;if(G.keys.ArrowDown||G.keys.KeyS||G.keys.s)my=1;
   if(G.keys.ArrowLeft||G.keys.KeyA||G.keys.a)mx=-1;if(G.keys.ArrowRight||G.keys.KeyD||G.keys.d)mx=1;
   if(G.joyX||G.joyY){mx=G.joyX;my=G.joyY}
-  if(mx||my){
-    const len=Math.sqrt(mx*mx+my*my);mx/=len;my/=len;
-    const spd=G.pSpeed*60*dt,nx=G.px+mx*spd,ny=G.py+my*spd;
+  // Smooth acceleration/deceleration
+  if(!G.vx)G.vx=0;if(!G.vy)G.vy=0;
+  const accel=12,friction=8;
+  if(mx||my){const len=Math.sqrt(mx*mx+my*my);mx/=len;my/=len;G.vx+=(mx*G.pSpeed-G.vx)*accel*dt;G.vy+=(my*G.pSpeed-G.vy)*accel*dt;G.pdir=Math.atan2(my,mx);G.pframe+=dt*8}
+  else{G.vx*=(1-friction*dt);G.vy*=(1-friction*dt);if(Math.abs(G.vx)<.01)G.vx=0;if(Math.abs(G.vy)<.01)G.vy=0}
+  if(G.vx||G.vy){
+    const spd=60,nx=G.px+G.vx*spd*dt,ny=G.py+G.vy*spd*dt;
+    // Collision via spatial grid (only check nearby)
     let blocked=false;
-    for(const o of G.worldObjects)if(o.solid){const dx=nx-o.x,dy=ny-o.y;if(Math.abs(dx)<22&&Math.abs(dy)<22){blocked=true;break}}
+    const nearby=getNearby(nx,ny,30);
+    for(const o of nearby)if(o.solid){const ddx=nx-o.x,ddy=ny-o.y;if(Math.abs(ddx)<22&&Math.abs(ddy)<22){blocked=true;break}}
     if(nx>0&&nx<G.worldW*TILE&&ny>0&&ny<G.worldH*TILE&&!blocked){G.px=nx;G.py=ny}
-    G.pdir=Math.atan2(my,mx);G.pframe+=dt*8;
-    // Track explored tiles
-    const tx=Math.floor(G.px/TILE),ty=Math.floor(G.py/TILE);G.exploredTiles.add(ty*G.worldW+tx);
+    // Track explored (auto-reveal 3x3 around player)
+    const ptx=Math.floor(G.px/TILE),pty=Math.floor(G.py/TILE);
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const idx=(pty+dy)*G.worldW+(ptx+dx);if(idx>=0&&idx<G.worldW*G.worldH)G.exploredTiles.add(idx)}
+    minimapDirty=true;
   }
-  // Camera
-  G.camX+=(G.px-W/(2*G.zoom)-G.camX)*.08;G.camY+=(G.py-H/(2*G.zoom)-G.camY)*.08;
+  // Smooth camera (lerp)
+  const camTarget_x=G.px-W/(2*G.zoom),camTarget_y=G.py-H/(2*G.zoom);
+  G.camX+=(camTarget_x-G.camX)*.12;G.camY+=(camTarget_y-G.camY)*.12;
   // Day/night
   G.dayTime+=dt*.008;const dayPhase=(Math.sin(G.dayTime*Math.PI*2)+1)/2;
   const wasNight=G.isNight;G.isNight=dayPhase<.3;
@@ -470,27 +490,25 @@ function update(dt){
   // NPC roaming
   for(const npc of G.npcs){npc.moveTimer-=dt;if(npc.moveTimer<=0){npc.moveDir=Math.random()*Math.PI*2;npc.moveTimer=2+Math.random()*4}npc.x+=Math.cos(npc.moveDir)*.5*60*dt;npc.y+=Math.sin(npc.moveDir)*.5*60*dt}
   // 2. Companion follow
-  G.companions.forEach((c,i)=>{const tx=G.px+Math.cos(i*1.2+G.dayTime*2)*40-20,ty=G.py+Math.sin(i*1.2+G.dayTime*2)*40+20;c.x+=(tx-c.x)*.05;c.y+=(ty-c.y)*.05;
-    // Auto-harvest nearby
-    for(const o of G.worldObjects){if(o.type==='plant'&&!o.harvested&&o.interactable){const dx=c.x-o.x,dy=c.y-o.y;if(Math.sqrt(dx*dx+dy*dy)<40){harvestPlant(o,true);break}}}
+  G.companions.forEach((c,i)=>{const tx=G.px+Math.cos(i*1.2+G.dayTime*2)*40-20,ty=G.py+Math.sin(i*1.2+G.dayTime*2)*40+20;c.x+=(tx-c.x)*.06;c.y+=(ty-c.y)*.06;
+    // Auto-harvest via spatial grid (every 30 frames to save perf)
+    if(animFrame%30===i%30){const near=getNearby(c.x,c.y,45);for(const o of near){if(o.type==='plant'&&!o.harvested&&o.interactable){harvestPlant(o,true);break}}}
   });
-  // AUTO-PICKUP: walk over plants to harvest them automatically
-  for(const o of G.worldObjects){
-    if(o.type==='plant'&&!o.harvested&&o.interactable){
-      const dx=G.px-o.x,dy=G.py-o.y,d=Math.sqrt(dx*dx+dy*dy);
-      if(d<35){harvestPlant(o);break}
-    }
+  // AUTO-PICKUP via spatial grid (fast)
+  const pickupNearby=getNearby(G.px,G.py,40);
+  for(const o of pickupNearby){
+    if(o.type==='plant'&&!o.harvested&&o.interactable){harvestPlant(o);break}
   }
-  // Nearest interactable (for structures, NPCs — things that need E press)
+  // Nearest interactable structure (spatial grid)
   G.nearObject=null;let nd=90;
-  for(const o of G.worldObjects){if(!o.interactable||o.harvested)continue;if(o.type==='plant')continue;const dx=G.px-o.x,dy=G.py-o.y,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;G.nearObject=o}}
+  const interactNearby=getNearby(G.px,G.py,90);
+  for(const o of interactNearby){if(!o.interactable||o.harvested||o.type==='plant')continue;const dx=G.px-o.x,dy=G.py-o.y,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;G.nearObject=o}}
   // Check NPCs too
   for(const npc of G.npcs){const dx=G.px-npc.x,dy=G.py-npc.y,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;G.nearObject={type:'npc',npc,x:npc.x,y:npc.y,name:npc.n,emoji:npc.e,interactable:true,interact:'npc'}}}
   const popup=document.getElementById('interact-popup');
   if(G.nearObject){popup.innerHTML=`<span class="interact-key">E</span> ${G.nearObject.name}`;popup.classList.add('show')}else popup.classList.remove('show');
-  // Meters
-  updateMeter('meter-hp',G.hp,G.maxHp,'#8a2020','#b03030');updateMeter('meter-sanity',G.sanity,G.maxSanity,'#4a3a6a','#7a5aaa');updateMeter('meter-energy',G.energy,G.maxEnergy,'#6a6a20','#c8a840');
-  document.getElementById('hp-val').textContent=Math.round(G.hp);document.getElementById('sanity-val').textContent=Math.round(G.sanity);document.getElementById('energy-val').textContent=Math.round(G.energy);
+  // Meters (throttled to every 5 frames)
+  if(animFrame%5===0){updateMeter('meter-hp',G.hp,G.maxHp,'#8a2020','#b03030');updateMeter('meter-sanity',G.sanity,G.maxSanity,'#4a3a6a','#7a5aaa');updateMeter('meter-energy',G.energy,G.maxEnergy,'#6a6a20','#c8a840');document.getElementById('hp-val').textContent=Math.round(G.hp);document.getElementById('sanity-val').textContent=Math.round(G.sanity);document.getElementById('energy-val').textContent=Math.round(G.energy)}
   // 4. Weather
   G.weatherTimer-=dt;if(G.weatherTimer<=0){G.weatherTimer=30+Math.random()*60;const weathers=['clear','clear','rain','fog','clear'];if(G.season===0)weathers.push('rain','rain');if(G.season===2)weathers.push('fog','fog');if(G.season===3)weathers.push('snow');G.weather=weathers[Math.floor(Math.random()*weathers.length)]}
   updateWeather(dt);
@@ -507,11 +525,13 @@ function updateMeter(id,val,max,dark,light){const c=document.getElementById(id),
 // ══════════════════════════════════════════════════════════
 //  4. WEATHER SYSTEM
 // ══════════════════════════════════════════════════════════
+let lastWeather='';
 function updateWeather(){
-  const wo=document.getElementById('weatherOverlay');
-  if(G.weather==='rain'&&wo.children.length<60){for(let i=0;i<3;i++){const d=document.createElement('div');d.className='rain-drop';d.style.cssText=`left:${Math.random()*100}%;height:${15+Math.random()*20}px;animation-duration:${.3+Math.random()*.3}s;animation-delay:${-Math.random()}s;top:-20px`;wo.appendChild(d);setTimeout(()=>d.remove(),2000)}}
-  else if(G.weather==='fog'){document.getElementById('vignette').style.background=`radial-gradient(ellipse at 50% 50%,transparent 30%,rgba(20,16,10,.7) 70%)`}
-  else{document.getElementById('vignette').style.background=`radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(0,0,0,.55) 100%)`}
+  if(G.weather===lastWeather)return;lastWeather=G.weather;
+  const wo=document.getElementById('weatherOverlay');wo.innerHTML='';
+  if(G.weather==='rain'){for(let i=0;i<30;i++){const d=document.createElement('div');d.className='rain-drop';d.style.cssText=`left:${Math.random()*100}%;height:${12+Math.random()*16}px;animation-duration:${.3+Math.random()*.4}s;animation-delay:${-Math.random()*2}s;top:-20px`;wo.appendChild(d)}}
+  if(G.weather==='fog')document.getElementById('vignette').style.background='radial-gradient(ellipse at 50% 50%,transparent 30%,rgba(20,16,10,.65) 70%)';
+  else document.getElementById('vignette').style.background='radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(0,0,0,.5) 100%)';
 }
 
 // ════════════════════════════════���═════════════════════════
@@ -521,42 +541,57 @@ function render(){
   ctx.clearRect(0,0,W,H);ctx.save();
   ctx.scale(G.zoom,G.zoom);ctx.translate(-G.camX,-G.camY);
   const vw=W/G.zoom,vh=H/G.zoom;
-  const viewL=G.camX-50,viewR=G.camX+vw+50,viewT=G.camY-50,viewB=G.camY+vh+50;
-  // Ground
+  const viewL=G.camX-60,viewR=G.camX+vw+60,viewT=G.camY-60,viewB=G.camY+vh+60;
+  // Ground tiles — batch by color to reduce state changes
   const stx=Math.max(0,Math.floor(viewL/TILE)),etx=Math.min(G.worldW-1,Math.ceil(viewR/TILE));
   const sty=Math.max(0,Math.floor(viewT/TILE)),ety=Math.min(G.worldH-1,Math.ceil(viewB/TILE));
+  let lastCol='';
   for(let ty=sty;ty<=ety;ty++)for(let tx=stx;tx<=etx;tx++){
     const idx=ty*G.worldW+tx,biome=G.worldTiles[idx],bd=BIOME_DATA[biome];if(!bd)continue;
     const bx=tx*TILE,by=ty*TILE;
-    // 12. Corruption overlay
-    if(G.corruptionTiles.has(idx)){ctx.fillStyle='#2a1018';ctx.fillRect(bx,by,TILE,TILE);continue}
-    ctx.fillStyle=bd.col;ctx.fillRect(bx,by,TILE,TILE);
-    // 14. Fog of war
-    if(!G.exploredTiles.has(idx)){ctx.fillStyle='rgba(5,4,3,.6)';ctx.fillRect(bx,by,TILE,TILE)}
-    else{const h=((tx*7+ty*13)&0xFF)/255;ctx.fillStyle=`rgba(0,0,0,${h*.12})`;ctx.fillRect(bx,by,TILE,TILE)}
+    const col=G.corruptionTiles.has(idx)?'#2a1018':bd.col;
+    if(col!==lastCol){ctx.fillStyle=col;lastCol=col}
+    ctx.fillRect(bx,by,TILE,TILE);
+    if(!G.exploredTiles.has(idx)){ctx.fillStyle='rgba(5,4,3,.55)';ctx.fillRect(bx,by,TILE,TILE);lastCol=''}
   }
-  // Collect drawable entities sorted by Y
+  // Visible objects via spatial grid (much faster than filtering all 4000)
   const drawables=[];
-  G.worldObjects.forEach(o=>{if(!o.harvested&&o.x>viewL&&o.x<viewR&&o.y>viewT&&o.y<viewB)drawables.push({y:o.y,draw:()=>drawObj(o)})});
+  const cxMin=Math.floor(viewL/CELL),cxMax=Math.ceil(viewR/CELL),cyMin=Math.floor(viewT/CELL),cyMax=Math.ceil(viewB/CELL);
+  for(let cy=cyMin;cy<=cyMax;cy++)for(let cx=cxMin;cx<=cxMax;cx++){
+    const cell=spatialGrid[cx+','+cy];if(!cell)continue;
+    for(const o of cell){if(o.harvested)continue;drawables.push({y:o.y,draw:()=>drawObj(o)})}
+  }
   G.enemies.forEach(e=>{if(e.x>viewL&&e.x<viewR&&e.y>viewT&&e.y<viewB)drawables.push({y:e.y,draw:()=>drawEnemy(e)})});
   G.npcs.forEach(n=>{if(n.x>viewL&&n.x<viewR&&n.y>viewT&&n.y<viewB)drawables.push({y:n.y,draw:()=>drawNPC(n)})});
   G.companions.forEach(c=>drawables.push({y:c.y,draw:()=>drawCompanion(c)}));
   drawables.push({y:G.py,draw:drawPlayer});
-  drawables.sort((a,b)=>a.y-b.y);drawables.forEach(d=>d.draw());
+  drawables.sort((a,b)=>a.y-b.y);
+  for(let i=0;i<drawables.length;i++)drawables[i].draw();
+  // Floating pickup text
+  ctx.font='bold 10px "Space Mono"';ctx.textAlign='center';
+  for(const ft of floatingTexts){ctx.globalAlpha=ft.t/.8;ctx.fillStyle=ft.color;ctx.fillText(ft.text,ft.x,ft.y);ctx.globalAlpha=1}
   ctx.restore();
-  renderMinimap();
+  // Minimap only every 10 frames
+  if(minimapDirty||animFrame%10===0){renderMinimap();minimapDirty=false}
 }
 
 function drawObj(o){
   const x=o.x,y=o.y;
-  if(o.glow&&o.glowR){const grd=ctx.createRadialGradient(x,y,0,x,y,o.glowR);grd.addColorStop(0,o.glow+'40');grd.addColorStop(1,'transparent');ctx.fillStyle=grd;ctx.fillRect(x-o.glowR,y-o.glowR,o.glowR*2,o.glowR*2)}
-  ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(x,y+8,10,4,0,0,Math.PI*2);ctx.fill();
-  const sz=o.type==='tree'?26:o.type==='rock'?20:18;const bob=o.interactable?Math.sin(animFrame*.05+o.x)*1.5:0;
+  const distToPlayer=Math.abs(x-G.px)+Math.abs(y-G.py);
+  const isClose=distToPlayer<300;
+  // Glow only for close, special objects
+  if(isClose&&o.glow&&o.glowR){const grd=ctx.createRadialGradient(x,y,0,x,y,o.glowR);grd.addColorStop(0,o.glow+'40');grd.addColorStop(1,'transparent');ctx.fillStyle=grd;ctx.fillRect(x-o.glowR,y-o.glowR,o.glowR*2,o.glowR*2)}
+  // Shadow only for close objects
+  if(isClose){ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(x,y+8,10,4,0,0,Math.PI*2);ctx.fill()}
+  const sz=o.type==='tree'?26:o.type==='rock'?20:18;
+  const bob=isClose&&o.interactable?Math.sin(animFrame*.05+o.x)*1.5:0;
   const sx=o.shake?Math.sin(o.shake*10)*3*(o.shake/10):0;if(o.shake)o.shake=Math.max(0,o.shake-.16);
   ctx.font=`${sz}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.globalAlpha=.35;ctx.fillText(o.emoji,x+sx+1,y-5+bob+1);ctx.globalAlpha=1;ctx.fillText(o.emoji,x+sx,y-5+bob);
-  if(o===G.nearObject){ctx.strokeStyle='rgba(200,168,64,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.stroke()}
-  if(o.isMushroom){const sp=Math.sin(animFrame*.1+o.x)*0.5+.5;ctx.globalAlpha=sp*.4;ctx.fillStyle='#c88030';ctx.beginPath();ctx.arc(x+Math.cos(animFrame*.05)*8,y-12+Math.sin(animFrame*.07)*4,1.5,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
+  ctx.fillText(o.emoji,x+sx,y-5+bob);
+  // Highlight ring only for nearest interactable
+  if(o===G.nearObject){ctx.strokeStyle='rgba(200,168,64,.6)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.stroke()}
+  // Mushroom sparkle (only if close)
+  if(isClose&&o.isMushroom){ctx.globalAlpha=.35;ctx.fillStyle='#c88030';ctx.beginPath();ctx.arc(x+Math.cos(animFrame*.05)*8,y-12,2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
 }
 
 function drawEnemy(e){
@@ -609,22 +644,26 @@ function drawPlayer(){
 
 // 14. Minimap with fog of war and icons
 function renderMinimap(){
-  const mc=document.getElementById('minimap'),mx=mc.getContext('2d'),mw=mc.width,mh=mc.height;mx.clearRect(0,0,mw,mh);
+  const mc=document.getElementById('minimap'),mx=mc.getContext('2d'),mw=mc.width,mh=mc.height;
+  // Use ImageData for fast pixel writes instead of fillRect per pixel
+  const img=mx.createImageData(mw,mh);const d=img.data;
   const scale=.7,vcx=G.px/TILE,vcy=G.py/TILE,vw=mw/scale,vh=mh/scale;
-  for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){
+  const colorCache={};function hexToRGB(hex){if(colorCache[hex])return colorCache[hex];const c=parseInt(hex.slice(1),16);const r=(c>>16)&255,g=(c>>8)&255,b=c&255;return colorCache[hex]=[r,g,b]}
+  for(let y=0;y<mh;y+=1)for(let x=0;x<mw;x+=1){
     const tx=Math.floor(vcx-vw/2+x/scale),ty=Math.floor(vcy-vh/2+y/scale);
-    if(tx<0||tx>=G.worldW||ty<0||ty>=G.worldH){mx.fillStyle='#0a0806';mx.fillRect(x,y,1,1);continue}
+    const pi=(y*mw+x)*4;
+    if(tx<0||tx>=G.worldW||ty<0||ty>=G.worldH){d[pi]=10;d[pi+1]=8;d[pi+2]=6;d[pi+3]=255;continue}
     const idx=ty*G.worldW+tx;
-    if(!G.exploredTiles.has(idx)){mx.fillStyle='#0a0806';mx.fillRect(x,y,1,1);continue}
-    if(G.corruptionTiles.has(idx)){mx.fillStyle='#3a1020';mx.fillRect(x,y,1,1);continue}
-    mx.fillStyle=BIOME_DATA[G.worldTiles[idx]]?.col||'#1a1610';mx.fillRect(x,y,1,1);
+    if(!G.exploredTiles.has(idx)){d[pi]=10;d[pi+1]=8;d[pi+2]=6;d[pi+3]=255;continue}
+    if(G.corruptionTiles.has(idx)){d[pi]=58;d[pi+1]=16;d[pi+2]=32;d[pi+3]=255;continue}
+    const col=BIOME_DATA[G.worldTiles[idx]]?.col||'#1a1610';const[r,g,b]=hexToRGB(col);
+    d[pi]=r;d[pi+1]=g;d[pi+2]=b;d[pi+3]=255;
   }
-  // Structure icons on minimap
-  for(const o of G.worldObjects){if(!o.interactable||o.type==='plant')continue;const sx=(o.x/TILE-vcx+vw/2)*scale,sy=(o.y/TILE-vcy+vh/2)*scale;if(sx>0&&sx<mw&&sy>0&&sy<mh){mx.fillStyle='#c8a840';mx.fillRect(sx-1,sy-1,2,2)}}
-  // Enemies
-  G.enemies.forEach(e=>{const sx=(e.x/TILE-vcx+vw/2)*scale,sy=(e.y/TILE-vcy+vh/2)*scale;if(sx>0&&sx<mw&&sy>0&&sy<mh){mx.fillStyle='#b03030';mx.fillRect(sx-1,sy-1,2,2)}});
-  // Player
-  mx.fillStyle='#c8a840';mx.beginPath();mx.arc(mw/2,mh/2,2,0,Math.PI*2);mx.fill();
+  mx.putImageData(img,0,0);
+  // Enemies (red dots)
+  mx.fillStyle='#d03030';G.enemies.forEach(e=>{const sx=(e.x/TILE-vcx+vw/2)*scale,sy=(e.y/TILE-vcy+vh/2)*scale;if(sx>1&&sx<mw-1&&sy>1&&sy<mh-1)mx.fillRect(sx-1,sy-1,2,2)});
+  // Player (gold dot)
+  mx.fillStyle='#e8c850';mx.beginPath();mx.arc(mw/2,mh/2,2.5,0,Math.PI*2);mx.fill();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -677,8 +716,9 @@ function harvestPlant(o,auto=false){
     o.harvested=true;o.regrowTimer=25+Math.random()*25;
     const bk=Object.keys(G.biomes)[Math.floor(Math.random()*8)];G.biomes[bk]=Math.min(100,G.biomes[bk]+1);
     if(G.agenda)G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+2);
+    addFloatingText(o.x,o.y-15,`+${p.e} ${p.n||p.name}`,p.type==='mushroom'?'#c88030':'#90d060');
     if(p.type==='mushroom'){if(!auto)toast(`🍄 RARE! ${p.e} ${p.n||p.name}!`,'mu');playSound('rare');screenFlash('#c88030')}
-    else{if(!auto)toast(`${p.e} ${p.n||p.name} harvested!`,'ok');playSound('harvest')}
+    else{playSound('harvest')}
     G.worldObjects.filter(t=>t.type==='tree'&&Math.abs(t.x-o.x)<60&&Math.abs(t.y-o.y)<60).forEach(t=>t.shake=8);
     updateRes();renderHotbar();
   }else{o.harvested=true;o.regrowTimer=12+Math.random()*12;if(!auto)toast('Nothing found...','er')}
