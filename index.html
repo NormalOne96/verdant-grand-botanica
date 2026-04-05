@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050a03">
+<title>VERDANT — Grand Botanica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Space+Mono:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+:root{
+--bg:#050a03;--bg2:#0a1207;--bg3:#0f1a0b;--s1:#141f10;--s2:#192614;--s3:#1f2f18;
+--b1:#263820;--b2:#365030;--b3:#4a6840;
+--t1:#c8e8a8;--t2:#88b868;--t3:#507840;--t4:#304820;
+--green:#58d838;--g2:#3ea820;--g3:#287010;
+--gold:#f0d030;--g2d:#c8a810;--amber:#e89020;
+--red:#e83030;--r2:#b01818;--pink:#e050a0;
+--blue:#30a0e8;--b2l:#1068b8;--teal:#30d8b0;--purple:#a850e8;
+--r1c:#58d838;--r2c:#30a0e8;--r3c:#a850e8;--r4c:#e89020;--r5c:#e83030;--r6c:#f0d030;--r7c:#ffffff;--r8c:#d040ff;
+--fd:'Cinzel',serif;--fm:'Space Mono',monospace;--fb:'Crimson Pro',serif;
+--rad:10px;--radl:16px;--radxl:24px;
+--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
+--hud:60px;--nav:58px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:16px;line-height:1.5}
+
+/* SCREEN SYSTEM */
+.scr{position:fixed;inset:0;display:none;flex-direction:column;z-index:1;overflow:hidden}
+.scr.on{display:flex}
+
+/* STARS */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twk var(--d,3s) ease-in-out infinite var(--dl,0s);width:var(--sz,1px);height:var(--sz,1px)}
+@keyframes twk{0%,100%{opacity:.08}50%{opacity:var(--pk,.6)}}
+
+/* PARTICLE BURST */
+.particle{position:fixed;pointer-events:none;border-radius:50%;animation:burst .6s ease-out forwards;z-index:999}
+@keyframes burst{0%{transform:scale(0);opacity:1}100%{transform:scale(3) translate(var(--tx,0),var(--ty,0));opacity:0}}
+
+/* ─── TITLE ─── */
+#s-title{align-items:center;justify-content:center;text-align:center;padding:2rem 1.5rem;
+  background:radial-gradient(ellipse at 50% 30%,rgba(15,50,8,.7) 0%,transparent 70%)}
+.t-orb{position:relative;width:130px;height:130px;margin:0 auto .8rem;flex-shrink:0}
+.t-ring{position:absolute;border-radius:50%;border:1px solid rgba(88,216,56,.3);animation:spin var(--sp,8s) linear infinite var(--rv,normal)}
+.t-ring:nth-child(1){inset:8px;--sp:8s}
+.t-ring:nth-child(2){inset:22px;--sp:12s;--rv:reverse;border-color:rgba(48,216,176,.2)}
+.t-ring:nth-child(3){inset:36px;--sp:16s;border-color:rgba(168,80,232,.15)}
+.t-dot{position:absolute;border-radius:50%;box-shadow:0 0 8px currentColor}
+.t-dot:nth-child(4){width:7px;height:7px;top:-4px;left:50%;transform:translateX(-50%);background:var(--teal);color:var(--teal)}
+.t-dot:nth-child(5){width:5px;height:5px;top:50%;right:-3px;transform:translateY(-50%);background:var(--purple);color:var(--purple)}
+.t-dot:nth-child(6){width:4px;height:4px;bottom:-3px;left:35%;background:var(--amber);color:var(--amber)}
+.t-earth{font-size:3.8rem;display:flex;align-items:center;justify-content:center;height:100%;filter:drop-shadow(0 0 20px rgba(88,216,56,.6));animation:perf 4s ease-in-out infinite}
+@keyframes perf{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wm{font-family:var(--fd);font-size:clamp(2.8rem,12vw,5.5rem);font-weight:900;color:var(--green);letter-spacing:.15em;text-shadow:0 0 50px rgba(88,216,56,.5),0 2px 0 rgba(0,0,0,.9);line-height:1}
+.wm-ii{font-family:var(--fd);font-size:clamp(.9rem,3vw,1.4rem);color:var(--t3);letter-spacing:.4em;margin:.2rem 0}
+.wm-sub{font-family:var(--fd);font-size:.75rem;color:var(--t3);letter-spacing:.35em;margin-bottom:1rem;text-transform:uppercase}
+.tagline{font-style:italic;color:var(--t2);font-size:.88rem;max-width:460px;line-height:1.7;margin-bottom:1.5rem}
+.crisis-w{width:min(360px,88vw);margin:0 auto 1.5rem}
+.crisis-h{display:flex;justify-content:space-between;font-family:var(--fm);font-size:.62rem;color:var(--red);margin-bottom:.3rem;letter-spacing:.06em}
+.crisis-t{background:rgba(232,48,48,.12);border:1px solid rgba(232,48,48,.4);border-radius:4px;height:8px;overflow:hidden}
+.crisis-f{width:18%;height:100%;background:linear-gradient(90deg,var(--r2),var(--red));border-radius:4px;animation:cgrow 90s linear forwards}
+@keyframes cgrow{to{width:96%}}
+.stat-badge-row{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem;font-family:var(--fm);font-size:.62rem}
+.sb{display:flex;align-items:center;gap:.25rem;padding:.25rem .6rem;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--t2)}
+.sb b{color:var(--green)}
+
+/* ─── BUTTONS ─── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.7rem 1.5rem;border:none;border-radius:var(--rad);font-family:var(--fd);font-size:.78rem;font-weight:700;letter-spacing:.07em;cursor:pointer;transition:transform .1s,box-shadow .2s;user-select:none;-webkit-user-select:none;position:relative;overflow:hidden;text-decoration:none;white-space:nowrap}
+.btn:active{transform:scale(.94)}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
+.btn:hover::after{background:rgba(255,255,255,.07)}
+.btn-p{background:var(--g2);color:#030801;border:1px solid var(--green);box-shadow:0 0 20px rgba(88,216,56,.3)}
+.btn-p:hover{box-shadow:0 0 32px rgba(88,216,56,.5)}
+.btn-g{background:#3a2800;color:var(--gold);border:1px solid var(--g2d);box-shadow:0 0 14px rgba(240,208,48,.2)}
+.btn-r{background:#3a0808;color:var(--red);border:1px solid var(--r2)}
+.btn-gh{background:rgba(255,255,255,.04);color:var(--t2);border:1px solid var(--b2)}
+.btn-b{background:#082030;color:var(--blue);border:1px solid var(--b2l)}
+.btn-t{background:#082820;color:var(--teal);border:1px solid #185840}
+.btn-purp{background:#200838;color:var(--purple);border:1px solid #6030b0}
+.btn-lg{padding:1rem 2rem;font-size:.95rem}
+.btn-sm{padding:.38rem .8rem;font-size:.65rem}
+.btn-xs{padding:.22rem .5rem;font-size:.58rem}
+.btn-fw{width:100%;margin-bottom:.5rem}
+
+/* ─── HUD ─── */
+#hud{display:flex;align-items:center;gap:.35rem;padding:.5rem .7rem;background:rgba(5,10,3,.96);border-bottom:1px solid var(--b1);height:var(--hud);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;backdrop-filter:blur(10px)}
+#hud::-webkit-scrollbar{display:none}
+.hbrand{font-family:var(--fd);font-weight:900;color:var(--green);font-size:.95rem;letter-spacing:.12em;white-space:nowrap;flex-shrink:0}
+.hturn{font-family:var(--fm);font-size:.55rem;color:var(--t3);flex-shrink:0;white-space:nowrap}
+.hres{display:flex;align-items:center;gap:.2rem;font-family:var(--fm);font-size:.6rem;color:var(--t1);white-space:nowrap;padding:.18rem .4rem;background:rgba(255,255,255,.04);border-radius:5px;border:1px solid var(--b1);flex-shrink:0}
+.hres .v{color:var(--green);font-weight:700}
+.hcrisis{margin-left:auto;display:flex;align-items:center;gap:.3rem;flex-shrink:0}
+.hcbar{width:50px;height:5px;background:rgba(232,48,48,.18);border-radius:3px;overflow:hidden}
+.hcfill{height:100%;background:var(--red);border-radius:3px;transition:width .5s}
+.hmenu{background:transparent;border:none;color:var(--t2);font-size:1.2rem;cursor:pointer;padding:.2rem .35rem;flex-shrink:0}
+
+/* ─── PANEL ─── */
+#panel{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;background:var(--bg)}
+#panel::-webkit-scrollbar{width:3px}
+#panel::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.tp{display:none;min-height:100%;padding:.8rem}
+.tp.on{display:block}
+
+/* ─── NAV ─── */
+#nav{display:flex;background:rgba(5,10,3,.97);border-top:1px solid var(--b1);height:var(--nav);flex-shrink:0;padding-bottom:var(--safe-b);backdrop-filter:blur(10px)}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1rem;background:transparent;border:none;color:var(--t3);font-family:var(--fm);font-size:.48rem;letter-spacing:.03em;cursor:pointer;transition:color .15s;padding:.3rem 0;position:relative}
+.nb.on{color:var(--green)}
+.nb.on::after{content:'';position:absolute;bottom:0;left:18%;right:18%;height:2px;background:var(--green);border-radius:2px}
+.ni{font-size:1.25rem;line-height:1.1}
+.nbadge{position:absolute;top:.1rem;right:calc(50% - 18px);background:var(--red);color:#fff;font-family:var(--fm);font-size:.42rem;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 2px}
+
+/* ─── SECTIONS ─── */
+.sh{font-family:var(--fd);font-size:.95rem;color:var(--green);letter-spacing:.08em;margin-bottom:.8rem;padding-bottom:.45rem;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:.45rem}
+.lore{background:rgba(88,216,56,.04);border-left:3px solid var(--g2);border-radius:0 var(--rad) var(--rad) 0;padding:.7rem .9rem;font-style:italic;color:var(--t2);font-size:.78rem;line-height:1.7;margin-bottom:.9rem}
+.divider{border:none;border-top:1px solid var(--b1);margin:.7rem 0}
+
+/* ─── PLANT CARDS ─── */
+.grid-plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:.5rem}
+.pc{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rad);padding:.65rem .5rem;cursor:pointer;transition:all .16s;text-align:center;position:relative;user-select:none}
+.pc:active{transform:scale(.93);background:var(--s3)}
+.pc.sel{border-color:var(--green);box-shadow:0 0 10px rgba(88,216,56,.3),inset 0 0 8px rgba(88,216,56,.08)}
+.pc.undisc{opacity:.3;filter:grayscale(.8);cursor:default}
+.pe{font-size:1.75rem;display:block;margin-bottom:.25rem;line-height:1}
+.pn{font-family:var(--fd);font-size:.58rem;color:var(--t1);line-height:1.2;margin-bottom:.18rem}
+.pt{font-family:var(--fm);font-size:.48rem;color:var(--t3)}
+.pq{position:absolute;top:.22rem;right:.28rem;font-family:var(--fm);font-size:.5rem;color:var(--green);background:rgba(88,216,56,.14);padding:.08rem .22rem;border-radius:3px}
+.prr{position:absolute;top:.22rem;left:.28rem;width:5px;height:5px;border-radius:50%}
+.pmush{position:absolute;bottom:.22rem;left:0;right:0;text-align:center;font-family:var(--fm);font-size:.42rem;color:var(--amber);letter-spacing:.03em}
+.psci{font-size:.42rem;color:var(--t4);font-style:italic;margin-top:.12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ─── CREATURE CARDS ─── */
+.grid-creatures{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:.75rem}
+.cc{background:var(--s1);border:2px solid var(--b1);border-radius:var(--radl);padding:.9rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.cc::before{content:'';position:absolute;inset:0;background:var(--cc-col,var(--green));opacity:.06;pointer-events:none}
+.cc:active{transform:scale(.96)}
+.ccls{font-family:var(--fm);font-size:.52rem;letter-spacing:.1em;padding:.15rem .4rem;border-radius:3px;display:inline-block;margin-bottom:.45rem}
+.cem{font-size:2rem;display:block;margin-bottom:.35rem;line-height:1}
+.cn{font-family:var(--fd);font-size:.82rem;color:var(--t1);margin-bottom:.2rem}
+.ct{font-family:var(--fm);font-size:.54rem;color:var(--t3)}
+.cstats{display:grid;grid-template-columns:repeat(5,1fr);gap:.15rem;margin:.5rem 0}
+.cst{text-align:center;font-family:var(--fm);font-size:.56rem;color:var(--t3)}
+.cst .v{display:block;font-size:.82rem;font-weight:700;color:var(--t1);margin-bottom:.08rem}
+.hpb{background:rgba(255,255,255,.07);border-radius:3px;height:5px;overflow:hidden;margin-bottom:.4rem}
+.hpf{height:100%;border-radius:3px;transition:width .4s}
+.xpb{background:rgba(240,208,48,.1);border-radius:2px;height:3px;overflow:hidden}
+.xpf{height:100%;background:var(--gold);border-radius:2px;transition:width .4s}
+.clvl{position:absolute;top:.45rem;right:.45rem;background:var(--gold);color:#1a1000;font-family:var(--fm);font-size:.5rem;font-weight:700;padding:.1rem .28rem;border-radius:3px}
+.cabs{display:flex;gap:.22rem;flex-wrap:wrap;margin-top:.35rem}
+.ab{font-family:var(--fm);font-size:.5rem;padding:.12rem .3rem;background:rgba(255,255,255,.05);border:1px solid var(--b1);border-radius:3px;color:var(--t3)}
+.cls-r{background:rgba(168,80,232,.2);color:#d0a0f8}
+.cls-h{background:rgba(48,216,176,.2);color:#80f0d0}
+.cls-w{background:rgba(232,48,48,.2);color:#f09090}
+.cls-e{background:rgba(48,160,232,.2);color:#90c8f0}
+.cls-d{background:rgba(48,160,232,.15);color:#80b8e8}
+.cls-a{background:rgba(240,208,48,.25);color:var(--gold);box-shadow:0 0 6px rgba(240,208,48,.25)}
+
+/* ─── CAULDRON ─── */
+.cring{display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0 1.1rem;padding:.5rem;background:var(--s1);border:1px solid var(--b1);border-radius:var(--radl);min-height:100px;align-items:center}
+.cs{width:72px;height:72px;border:2px dashed var(--b2);border-radius:var(--rad);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.12rem;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.02);position:relative;flex-shrink:0}
+.cs:hover,.cs:active{border-color:var(--green);background:rgba(88,216,56,.07)}
+.cs.filled{border-style:solid;border-color:var(--g2)}
+.cs .sem{font-size:1.5rem;line-height:1}
+.cs .sn{font-family:var(--fm);font-size:.46rem;color:var(--t2);text-align:center;line-height:1.2;padding:0 .15rem}
+.cs .sx{position:absolute;top:1px;right:3px;font-size:.62rem;color:var(--t3);cursor:pointer;line-height:1;padding:2px}
+.cs .sx:hover{color:var(--red)}
+.fr{display:none;margin-top:1rem;padding:1.1rem;background:var(--s2);border:1px solid var(--b2);border-radius:var(--radl);text-align:center;animation:fup .4s ease}
+.fr.on{display:block}
+@keyframes fup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── MAP ─── */
+#world-wrap{overflow:auto;-webkit-overflow-scrolling:touch;cursor:grab;touch-action:pan-x pan-y;background:var(--bg2);border-radius:var(--rad);border:1px solid var(--b1)}
+#world-wrap:active{cursor:grabbing}
+#world-canvas{display:block}
+.htt{position:fixed;background:rgba(5,10,3,.97);border:1px solid var(--b2);border-radius:var(--rad);padding:.65rem .8rem;font-size:.7rem;z-index:200;pointer-events:none;max-width:175px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.7);backdrop-filter:blur(6px)}
+.htn{font-family:var(--fd);font-size:.8rem;color:var(--t1);margin-bottom:.2rem}
+.htt .htr{display:flex;justify-content:space-between;gap:.5rem;margin-bottom:.12rem;font-size:.65rem}
+
+/* ─── WORLDS ─── */
+.wg{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:.7rem}
+.wc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--radl);padding:.9rem;cursor:pointer;transition:all .18s;text-align:center;position:relative}
+.wc:active{transform:scale(.96)}
+.wc.lk{opacity:.35;cursor:default}
+.wc.aw{border-color:var(--teal);box-shadow:0 0 14px rgba(48,216,176,.18)}
+.wce{font-size:2.8rem;display:block;margin-bottom:.45rem;filter:drop-shadow(0 0 10px var(--wg,#fff))}
+.wcn{font-family:var(--fd);font-size:.85rem;color:var(--t1);margin-bottom:.2rem}
+.wct{font-family:var(--fm);font-size:.52rem;color:var(--t3);margin-bottom:.5rem}
+.wcl{position:absolute;top:.45rem;right:.45rem;font-size:1rem;opacity:.5}
+
+/* ─── DISTRICTS ─── */
+.dg{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:.6rem}
+.dc{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rad);padding:.75rem;cursor:pointer;transition:all .16s;position:relative}
+.dc:active{transform:scale(.95)}
+.dc.built{border-color:var(--b2)}
+.dc.lk2{opacity:.3;cursor:not-allowed}
+.dce{font-size:1.7rem;display:block;margin-bottom:.35rem}
+.dcn{font-family:var(--fd);font-size:.68rem;color:var(--t1);margin-bottom:.18rem}
+.dcd{font-size:.62rem;color:var(--t2);line-height:1.4;margin-bottom:.35rem}
+.dcc{font-family:var(--fm);font-size:.52rem;color:var(--amber)}
+.dcb{position:absolute;top:.28rem;right:.32rem;font-size:.5rem;font-family:var(--fm);background:rgba(88,216,56,.14);color:var(--green);padding:.08rem .28rem;border-radius:3px}
+
+/* ─── AGENDA ─── */
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:.75rem;margin-bottom:.9rem}
+.ac{background:var(--s1);border:2px solid var(--b1);border-radius:var(--radl);padding:.9rem;cursor:pointer;transition:all .18s}
+.ac.akt{border-color:var(--gold);box-shadow:0 0 14px rgba(240,208,48,.14)}
+.aci{font-size:1.9rem;display:block;margin-bottom:.4rem}
+.acn{font-family:var(--fd);font-size:.88rem;color:var(--t1);margin-bottom:.28rem}
+.acd{font-size:.7rem;color:var(--t2);line-height:1.5;margin-bottom:.6rem}
+.acp{background:rgba(255,255,255,.07);height:7px;border-radius:4px;overflow:hidden;margin-bottom:.28rem}
+.acf{height:100%;border-radius:4px;transition:width .5s}
+.acpct{font-family:var(--fm);font-size:.55rem;color:var(--t3);text-align:right}
+
+/* ─── BATTLE ─── */
+.bf{display:grid;grid-template-columns:1fr 30px 1fr;gap:.5rem;align-items:start;margin:.9rem 0}
+.bfs{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rad);padding:.75rem;text-align:center}
+.bfe{font-size:2.2rem;display:block;margin-bottom:.25rem}
+.bfn{font-family:var(--fd);font-size:.75rem;color:var(--t1);margin-bottom:.18rem}
+.bfh{font-family:var(--fm);font-size:.56rem;margin-bottom:.35rem}
+.vs{display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:.95rem;color:var(--red);text-shadow:0 0 10px rgba(232,48,48,.6)}
+.blog{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--rad);padding:.7rem;height:155px;overflow-y:auto;font-family:var(--fm);font-size:.6rem;line-height:1.85;margin-bottom:.8rem}
+.blog::-webkit-scrollbar{width:2px}
+.blog::-webkit-scrollbar-thumb{background:var(--b2)}
+.la{color:var(--red)}.lh{color:var(--teal)}.ls{color:var(--gold)}.lw{color:var(--green);font-weight:700}.ld{color:var(--blue)}.ll{color:var(--t3)}
+.bbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
+
+/* ─── BIOMES ─── */
+.biog{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.5rem}
+.bioc{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rad);padding:.65rem;text-align:center}
+.bioe{font-size:1.35rem;display:block;margin-bottom:.22rem}
+.bion{font-family:var(--fd);font-size:.56rem;margin-bottom:.28rem}
+.biop{font-family:var(--fm);font-size:.7rem;margin-bottom:.28rem}
+.biob{background:rgba(255,255,255,.07);height:5px;border-radius:3px;overflow:hidden}
+.biof{height:100%;border-radius:3px;transition:width .4s}
+
+/* ─── PLANET PROGRESS ─── */
+.epp{background:rgba(48,216,176,.08);border:1px solid rgba(48,216,176,.22);border-radius:var(--rad);padding:.75rem;margin-bottom:.75rem}
+.eppl{font-family:var(--fm);font-size:.6rem;color:var(--teal);margin-bottom:.35rem}
+.eppb{background:rgba(48,216,176,.12);height:8px;border-radius:4px;overflow:hidden}
+.eppf{height:100%;background:var(--teal);border-radius:4px;transition:width .5s}
+
+/* ─── CODEX ─── */
+.codex-stats{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.9rem}
+.cxs{display:flex;align-items:center;gap:.28rem;padding:.25rem .6rem;background:var(--s2);border:1px solid var(--b1);border-radius:6px;font-family:var(--fm);font-size:.6rem;color:var(--t2)}
+.cxs b{color:var(--green)}
+
+/* ─── FILTERS ─── */
+.filters{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.7rem;padding:.4rem;background:var(--s1);border-radius:var(--rad)}
+.fb{padding:.25rem .6rem;border:1px solid var(--b1);background:transparent;color:var(--t3);border-radius:20px;font-family:var(--fm);font-size:.55rem;cursor:pointer;transition:all .14s;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.fb.on,.fb:hover{border-color:var(--green);color:var(--green);background:rgba(88,216,56,.08)}
+.srch{position:relative;margin-bottom:.7rem}
+.srch input{width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:var(--rad);padding:.5rem 2rem .5rem .85rem;color:var(--t1);font-family:var(--fb);font-size:.83rem;outline:none;transition:border-color .15s}
+.srch input:focus{border-color:var(--b2)}
+.srch input::placeholder{color:var(--t3)}
+.srch::after{content:'🔍';position:absolute;right:.65rem;top:50%;transform:translateY(-50%);font-size:.8rem;pointer-events:none}
+
+/* ─── STAT BARS ─── */
+.sr{display:flex;align-items:center;gap:.45rem;margin-bottom:.3rem}
+.sl{font-family:var(--fm);font-size:.55rem;color:var(--t3);width:30px;flex-shrink:0;text-transform:uppercase}
+.sb2{flex:1;background:rgba(255,255,255,.07);height:7px;border-radius:4px;overflow:hidden}
+.sf{height:100%;border-radius:4px;transition:width .4s}
+.sv{font-family:var(--fm);font-size:.58rem;color:var(--t1);width:22px;text-align:right;flex-shrink:0}
+.atk-f{background:var(--red)}.def-f{background:var(--blue)}.int-f{background:var(--purple)}.spd-f{background:var(--teal)}.heal-f{background:var(--green)}.tox-f{background:var(--amber)}.aura-f{background:var(--pink)}
+
+/* ─── MODALS ─── */
+.mb{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:flex-end;backdrop-filter:blur(4px)}
+.mb.on{display:flex}
+.mb.ctr{align-items:center;padding:1rem}
+.ms{background:var(--bg3);border:1px solid var(--b2);border-radius:var(--radxl) var(--radxl) 0 0;padding:1.4rem 1.1rem calc(1.4rem + var(--safe-b));width:100%;max-height:88vh;overflow-y:auto;animation:shu .28s ease}
+.mb.ctr .ms{border-radius:var(--radxl);max-height:92vh}
+@keyframes shu{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mh{width:34px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto .85rem}
+.mt{font-family:var(--fd);font-size:1.05rem;color:var(--green);margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem;justify-content:space-between}
+.mc{background:transparent;border:none;color:var(--t3);font-size:1.2rem;cursor:pointer}
+.scroll-a{overflow-y:auto;max-height:58vh;padding-right:.25rem}
+.scroll-a::-webkit-scrollbar{width:2px}
+.scroll-a::-webkit-scrollbar-thumb{background:var(--b2)}
+
+/* ─── TOAST ─── */
+#toasts{position:fixed;bottom:calc(var(--nav) + .7rem);right:.7rem;z-index:1000;display:flex;flex-direction:column;gap:.35rem;align-items:flex-end;max-width:300px}
+.toast{background:var(--s2);border:1px solid var(--b2);border-radius:var(--rad);padding:.55rem .9rem;font-family:var(--fm);font-size:.66rem;color:var(--t1);animation:tin .25s ease;box-shadow:0 4px 16px rgba(0,0,0,.6);pointer-events:none}
+@keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.er{border-color:var(--red);color:var(--red)}
+.toast.gd{border-color:var(--gold);color:var(--gold)}
+.toast.in{border-color:var(--blue);color:var(--blue)}
+.toast.mu{border-color:var(--purple);color:var(--purple)}
+
+/* ─── TURN OVERLAY ─── */
+#tov{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:900;display:none;align-items:center;justify-content:center;flex-direction:column;gap:.5rem}
+#tov.on{display:flex}
+.tn{font-family:var(--fd);font-size:3.2rem;color:var(--green);animation:tpa .5s ease}
+@keyframes tpa{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* ─── VICTORY ─── */
+#vov{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:950;display:none;align-items:center;justify-content:center;flex-direction:column;padding:2rem;text-align:center}
+#vov.on{display:flex;animation:vfade .8s ease}
+@keyframes vfade{from{opacity:0}to{opacity:1}}
+.vtitle{font-family:var(--fd);font-size:clamp(2rem,10vw,4rem);color:var(--gold);margin-bottom:.5rem;text-shadow:0 0 40px rgba(240,208,48,.6)}
+.vsub{font-style:italic;color:var(--t2);font-size:1rem;max-width:400px;margin-bottom:2rem}
+
+/* ─── UTILS ─── */
+.row{display:flex;gap:.5rem;align-items:center}.col{display:flex;flex-direction:column;gap:.35rem}
+.tc{text-align:center}.tm{font-family:var(--fm)}.td{color:var(--t3)}.ts{font-size:.75rem}
+.mt1{margin-top:.5rem}.mt2{margin-top:1rem}.mb1{margin-bottom:.5rem}.mb2{margin-bottom:1rem}
+.badge{display:inline-block;padding:.12rem .38rem;border-radius:3px;font-family:var(--fm);font-size:.52rem;letter-spacing:.04em}
+.bgreen{background:rgba(88,216,56,.14);color:var(--green);border:1px solid rgba(88,216,56,.28)}
+.bamber{background:rgba(232,144,32,.14);color:var(--amber);border:1px solid rgba(232,144,32,.28)}
+.bred{background:rgba(232,48,48,.14);color:var(--red);border:1px solid rgba(232,48,48,.28)}
+.bblue{background:rgba(48,160,232,.14);color:var(--blue);border:1px solid rgba(48,160,232,.28)}
+.bpurp{background:rgba(168,80,232,.14);color:var(--purple);border:1px solid rgba(168,80,232,.28)}
+.bgold{background:rgba(240,208,48,.14);color:var(--gold);border:1px solid rgba(240,208,48,.28)}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--t3);font-style:italic;font-size:.83rem}
+.res-row{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.9rem}
+.rp{display:flex;align-items:center;gap:.25rem;padding:.25rem .55rem;background:var(--s2);border:1px solid var(--b1);border-radius:6px;font-family:var(--fm);font-size:.6rem;color:var(--t1)}
+.rp .rv{color:var(--green);font-weight:700}
+@media(max-width:380px){.grid-plants{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))} .grid-creatures{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div id="toasts"></div>
+<div id="tov"><div class="tn" id="tnum">TURN 1</div><div style="font-family:var(--fm);font-size:.65rem;color:var(--t3)">THE EARTH BREATHES...</div></div>
+<div id="vov"></div>
+
+<!-- ══════════════════ TITLE ══════════════════ -->
+<div class="scr on" id="s-title">
+  <div class="t-orb">
+    <div class="t-ring"></div><div class="t-ring"></div><div class="t-ring"></div>
+    <div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div>
+    <div class="t-earth">🌍</div>
+  </div>
+  <div class="wm">VERDANT</div>
+  <div class="wm-ii">GRAND BOTANICA</div>
+  <div class="wm-sub">Last Rites of Earth</div>
+  <div class="crisis-w">
+    <div class="crisis-h"><span>⚠ PLANETARY COLLAPSE IMMINENT</span><span id="cpt">18%</span></div>
+    <div class="crisis-t"><div class="crisis-f"></div></div>
+  </div>
+  <p class="tagline">The planet bleeds. 225 species fight extinction. You are the last Defender — fuse ancient plants into living weapons, rebuild civilization, and seed the stars before Earth falls.</p>
+  <div class="stat-badge-row">
+    <span class="sb">🌿 <b>225</b> species</span>
+    <span class="sb">🍄 <b>75</b> mushrooms</span>
+    <span class="sb">⚗️ <b>500+</b> fusions</span>
+    <span class="sb">🪐 <b>6</b> worlds</span>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:.45rem;width:min(300px,88vw);margin:0 auto">
+    <button class="btn btn-p btn-lg btn-fw" onclick="startGame()">🌱 Begin Defense</button>
+    <button class="btn btn-g btn-fw" onclick="openM('m-howto')">📖 How to Play</button>
+    <button class="btn btn-gh btn-fw" onclick="openM('m-codex')">🌿 Full Botanica (225 species)</button>
+  </div>
+</div>
+
+<!-- ══════════════════ GAME ══════════════════ -->
+<div class="scr" id="s-game">
+  <div id="hud">
+    <span class="hbrand">VERDANT</span>
+    <span class="hturn" id="ht">T1</span>
+    <div class="hres">🌿 <span class="v" id="r-plants">12</span></div>
+    <div class="hres">🐾 <span class="v" id="r-creat">0</span></div>
+    <div class="hres">⚡ <span class="v" id="r-energy">10</span></div>
+    <div class="hres">🪙 <span class="v" id="r-seeds">80</span></div>
+    <div class="hres">⚗️ <span class="v" id="r-spores">3</span></div>
+    <div class="hcrisis">
+      <span style="font-family:var(--fm);font-size:.55rem;color:var(--red)" id="cr-pct">18%</span>
+      <div class="hcbar"><div class="hcfill" id="cr-bar" style="width:18%"></div></div>
+    </div>
+    <button class="hmenu" onclick="openM('m-menu')">☰</button>
+  </div>
+
+  <div id="panel">
+    <!-- MAP TAB -->
+    <div class="tp on" id="tp-map" style="padding:.5rem">
+      <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;flex-wrap:wrap;padding:0 .3rem">
+        <span style="font-family:var(--fd);font-size:.78rem;color:var(--green)">🗺 World Map</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-xs btn-gh" onclick="zM(-1)">−</button>
+        <button class="btn btn-xs btn-gh" onclick="zM(1)">+</button>
+        <button class="btn btn-xs btn-gh" onclick="openM('m-mapkey')">Legend</button>
+        <button class="btn btn-xs btn-t" onclick="endTurn()">⏭ End Turn</button>
+      </div>
+      <div id="world-wrap"><canvas id="wcanvas"></canvas></div>
+      <div class="htt" id="htt"></div>
+    </div>
+
+    <!-- PLANTS TAB -->
+    <div class="tp" id="tp-plants">
+      <div class="sh">🌿 Plant Collection</div>
+      <div class="lore">"Every root is a word in Earth's oldest language. Learn to read it — all 225 species speak differently."</div>
+      <div class="res-row" id="pr-row"></div>
+      <div class="filters" id="pf">
+        <button class="fb on" onclick="fP('all',this)">All</button>
+        <button class="fb" onclick="fP('flower',this)">Flowers</button>
+        <button class="fb" onclick="fP('herb',this)">Herbs</button>
+        <button class="fb" onclick="fP('mushroom',this)">🍄 Mushrooms</button>
+        <button class="fb" onclick="fP('tree',this)">Trees</button>
+        <button class="fb" onclick="fP('vine',this)">Vines</button>
+        <button class="fb" onclick="fP('toxic',this)">☠ Toxic</button>
+        <button class="fb" onclick="fP('aquatic',this)">Aquatic</button>
+        <button class="fb" onclick="fP('entheogen',this)">✦ Entheogen</button>
+        <button class="fb" onclick="fP('algae',this)">Algae</button>
+        <button class="fb" onclick="fP('rare',this)">Rare</button>
+        <button class="fb" onclick="fP('owned',this)">Owned</button>
+      </div>
+      <div class="srch"><input type="text" placeholder="Search 225 species…" oninput="sP(this.value)" id="ps-in"></div>
+      <div id="p-count" class="tm td" style="font-size:.58rem;margin-bottom:.55rem"></div>
+      <div class="grid-plants" id="pgrid"></div>
+    </div>
+
+    <!-- CAULDRON TAB -->
+    <div class="tp" id="tp-cauldron">
+      <div class="sh">⚗️ Fusion Cauldron</div>
+      <div class="lore">"The Mycelial Web knew: plants speak to each other through 8km of root threads per cubic meter of soil. The Cauldron makes their conversation physical."</div>
+      <div style="text-align:center;font-family:var(--fm);font-size:.62rem;color:var(--t2);margin-bottom:.4rem">Combine 2–4 plants · Mushrooms multiply all stats · 500+ named fusions</div>
+      <div class="cring" id="cring"></div>
+      <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:.7rem">
+        <button class="btn btn-p" onclick="doFuse()">⚗️ Fuse</button>
+        <button class="btn btn-gh btn-sm" onclick="clearC()">✕ Clear</button>
+        <button class="btn btn-g btn-sm" onclick="openM('m-hints')">💡 Hints</button>
+        <button class="btn btn-b btn-sm" onclick="openM('m-synergy')">🔗 Synergies</button>
+      </div>
+      <div class="fr" id="fr"></div>
+      <hr class="divider">
+      <div class="sh mt2">🐾 Your Creatures</div>
+      <div class="grid-creatures" id="cclist"></div>
+      <div class="empty" id="ccnone">Fuse plants above to forge your first creature!</div>
+    </div>
+
+    <!-- CREATURES TAB -->
+    <div class="tp" id="tp-creatures">
+      <div class="sh">🐾 Creature Dex</div>
+      <div class="lore">"75 mushroom species. 150 named fusions. Infinite combinations from 225 plants. No two playthroughs will forge the same roster."</div>
+      <div class="filters" id="cf">
+        <button class="fb on" onclick="fC('all',this)">All</button>
+        <button class="fb" onclick="fC('researcher',this)">🔬 Research</button>
+        <button class="fb" onclick="fC('healer',this)">💚 Healer</button>
+        <button class="fb" onclick="fC('warrior',this)">⚔️ Warrior</button>
+        <button class="fb" onclick="fC('explorer',this)">🧭 Explorer</button>
+        <button class="fb" onclick="fC('defender',this)">🛡 Defender</button>
+        <button class="fb" onclick="fC('apex',this)">⭐ Apex</button>
+      </div>
+      <div class="grid-creatures" id="cgrid"></div>
+      <div class="empty" id="cnone">No creatures yet. Visit the Cauldron!</div>
+    </div>
+
+    <!-- WORLDS TAB -->
+    <div class="tp" id="tp-worlds">
+      <div class="sh">🚀 Worlds & Civilization</div>
+      <div class="lore">"Earth was our cradle. Every star beyond is a second chance. Seed them with living intelligence before the darkness claims what we leave behind."</div>
+      <div class="epp">
+        <div class="eppl">🌍 Earth Stabilization Progress</div>
+        <div class="eppb"><div class="eppf" id="eppf" style="width:0%"></div></div>
+        <div style="font-family:var(--fm);font-size:.55rem;color:var(--t3);text-align:right;margin-top:.25rem" id="epppct">0%</div>
+      </div>
+      <div class="sh">🌍 Biome Status</div>
+      <div class="biog" id="biog"></div>
+      <hr class="divider">
+      <div class="sh mt2">🪐 Planetary Systems</div>
+      <p style="font-size:.72rem;color:var(--t2);margin-bottom:.75rem">Stabilize Earth biomes to unlock planets. Send Apex creatures to seed new life across the galaxy.</p>
+      <div class="wg" id="wg"></div>
+      <hr class="divider">
+      <div class="sh mt2">🏙 Civilization Districts</div>
+      <p style="font-size:.72rem;color:var(--t2);margin-bottom:.7rem">Permanent upgrades that shape your strategy. Build early, build often.</p>
+      <div class="dg" id="dg"></div>
+    </div>
+
+    <!-- AGENDA TAB -->
+    <div class="tp" id="tp-agenda">
+      <div class="sh">📋 Agenda & Victory</div>
+      <div class="lore">"Four paths to salvation. None are wrong. All require mastery. Which truth will you live?"</div>
+      <div class="ag" id="agrid"></div>
+      <hr class="divider">
+      <div class="sh mt2">⚔️ Battle Arena</div>
+      <div id="bsetup"></div>
+      <div id="bactive" style="display:none">
+        <div class="bf" id="bfield"></div>
+        <div class="blog" id="blog"></div>
+        <div class="bbtns">
+          <button class="btn btn-r" onclick="bAtk()">⚔️ Attack</button>
+          <button class="btn btn-g" onclick="bSpc()">✨ Special</button>
+          <button class="btn btn-gh" onclick="bFlee()">🏃 Flee</button>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="sh mt2">📜 Battle History</div>
+      <div id="bhist" class="tm td" style="font-size:.62rem">No battles yet.</div>
+    </div>
+  </div>
+
+  <div id="nav">
+    <button class="nb on" id="nb-map" onclick="sTab('map')"><span class="ni">🗺</span>MAP</button>
+    <button class="nb" id="nb-plants" onclick="sTab('plants')"><span class="ni">🌿</span>PLANTS<span class="nbadge" id="nbp" style="display:none">!</span></button>
+    <button class="nb" id="nb-cauldron" onclick="sTab('cauldron')"><span class="ni">⚗️</span>FORGE</button>
+    <button class="nb" id="nb-creatures" onclick="sTab('creatures')"><span class="ni">🐾</span>CREATURES</button>
+    <button class="nb" id="nb-worlds" onclick="sTab('worlds')"><span class="ni">🚀</span>WORLDS</button>
+    <button class="nb" id="nb-agenda" onclick="sTab('agenda')"><span class="ni">📋</span>AGENDA</button>
+  </div>
+</div>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<!-- HOW TO PLAY -->
+<div class="mb ctr" id="m-howto"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span>📖 How to Play</span><button class="mc" onclick="closeM('m-howto')">✕</button></div>
+  <div class="scroll-a" style="font-size:.8rem;color:var(--t2);line-height:1.8">
+    <p><b style="color:var(--green)">🗺 World Map</b> — Tap hex tiles to explore. Each biome contains plants specific to that region. Mushrooms are ultra-rare and continent-locked. Exploration costs ⚡ energy.</p>
+    <hr class="divider"><p><b style="color:var(--green)">🌿 225 Plant Species</b> — Flowers, herbs, trees, vines, cacti, aquatics, mosses, algae, entheogens, and 75 mushrooms across 8 rarity tiers. Each has ATK/DEF/INT/SPD/HEAL/TOXIC/AURA stats. Scientific names included.</p>
+    <hr class="divider"><p><b style="color:var(--green)">⚗️ Fusion Cauldron</b> — Combine 2–4 plants to forge creatures. 150+ named recipes exist. Every combo generates a unique creature algorithmically. Mushroom ingredients multiply stats by 1.5×–4×. Costs ⚗️ Spore Charges.</p>
+    <hr class="divider"><p><b style="color:var(--green)">🔗 Type Synergies</b> — Combining certain plant types creates bonus effects: mushroom+mushroom = Mycelial consciousness (+1.8× stats), toxic+mushroom = venomous spores, entheogen+mushroom = transcendence (+2.0× INT). 10 synergy pairs total.</p>
+    <hr class="divider"><p><b style="color:var(--green)">🐾 Creatures</b> — 6 classes: Researcher · Healer · Warrior · Explorer · Defender · Apex. Battle to gain XP and level up. Apex creatures can seed planets.</p>
+    <hr class="divider"><p><b style="color:var(--green)">🚀 Worlds</b> — Stabilize Earth's 8 biomes. Each healed biome unlocks a new planet. Build Exodus Bay, then send Apex creatures to seed new worlds.</p>
+    <hr class="divider"><p><b style="color:var(--green)">🏙 Districts</b> — Build 8 permanent civilization upgrades. Observatory reveals planets. Mycelium Network heals all creatures. Exodus Bay enables planetary seeding.</p>
+    <hr class="divider"><p><b style="color:var(--gold)">🏆 4 Victory Paths</b><br>Science: 80% research progress<br>Nature: All 8 biomes at 70%+<br>War: Defeat 5 rival Defenders<br>Exodus: Seed 3 planets with Apex creatures</p>
+  </div>
+  <button class="btn btn-p btn-fw mt2" onclick="closeM('m-howto');startGame()">🌱 Begin Defense</button>
+</div></div>
+
+<!-- CODEX -->
+<div class="mb" id="m-codex"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span>🌿 The Grand Botanica</span><button class="mc" onclick="closeM('m-codex')">✕</button></div>
+  <div class="codex-stats" id="cx-stats"></div>
+  <div class="filters" id="cxf">
+    <button class="fb on" onclick="fCX('all',this)">All</button>
+    <button class="fb" onclick="fCX('flower',this)">Flowers</button>
+    <button class="fb" onclick="fCX('herb',this)">Herbs</button>
+    <button class="fb" onclick="fCX('mushroom',this)">🍄 Mushrooms</button>
+    <button class="fb" onclick="fCX('tree',this)">Trees</button>
+    <button class="fb" onclick="fCX('toxic',this)">Toxic</button>
+    <button class="fb" onclick="fCX('entheogen',this)">Entheogen</button>
+    <button class="fb" onclick="fCX('aquatic',this)">Aquatic</button>
+    <button class="fb" onclick="fCX('algae',this)">Algae</button>
+    <button class="fb" onclick="fCX('rare',this)">Rare</button>
+  </div>
+  <div class="srch"><input type="text" placeholder="Search…" oninput="sCX(this.value)"></div>
+  <div class="scroll-a mt1">
+    <div class="grid-plants" id="cxgrid"></div>
+  </div>
+</div></div>
+
+<!-- SYNERGY -->
+<div class="mb ctr" id="m-synergy"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span>🔗 Type Synergies</span><button class="mc" onclick="closeM('m-synergy')">✕</button></div>
+  <div class="scroll-a" id="syn-content" style="font-size:.78rem;color:var(--t2)"></div>
+</div></div>
+
+<!-- HINTS -->
+<div class="mb" id="m-hints"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span>💡 Fusion Hints</span><button class="mc" onclick="closeM('m-hints')">✕</button></div>
+  <div class="scroll-a mt1" id="hints-list"></div>
+</div></div>
+
+<!-- PLANT DETAIL -->
+<div class="mb" id="m-plant"><div class="ms">
+  <div class="mh"></div>
+  <button class="mc" style="position:absolute;top:1.2rem;right:1rem" onclick="closeM('m-plant')">✕</button>
+  <div id="m-plant-c"></div>
+</div></div>
+
+<!-- CREATURE DETAIL -->
+<div class="mb" id="m-creature"><div class="ms">
+  <div class="mh"></div>
+  <button class="mc" style="position:absolute;top:1.2rem;right:1rem" onclick="closeM('m-creature')">✕</button>
+  <div id="m-creature-c"></div>
+</div></div>
+
+<!-- TILE -->
+<div class="mb" id="m-tile"><div class="ms">
+  <div class="mh"></div>
+  <button class="mc" style="position:absolute;top:1.2rem;right:1rem" onclick="closeM('m-tile')">✕</button>
+  <div id="m-tile-c"></div>
+</div></div>
+
+<!-- PLANET -->
+<div class="mb" id="m-planet"><div class="ms">
+  <div class="mh"></div>
+  <button class="mc" style="position:absolute;top:1.2rem;right:1rem" onclick="closeM('m-planet')">✕</button>
+  <div id="m-planet-c"></div>
+</div></div>
+
+<!-- PLANT PICKER -->
+<div class="mb" id="m-picker"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span id="picker-title">Select Plant</span><button class="mc" onclick="closeM('m-picker')">✕</button></div>
+  <div class="scroll-a mt1">
+    <div class="grid-plants" id="picker-grid"></div>
+  </div>
+</div></div>
+
+<!-- MAP KEY -->
+<div class="mb ctr" id="m-mapkey"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span>🗺 Biome Legend</span><button class="mc" onclick="closeM('m-mapkey')">✕</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.75rem;color:var(--t2)">
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#1a3810;border-radius:3px;flex-shrink:0"></div>Forest</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#122810;border-radius:3px;flex-shrink:0"></div>Jungle</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#587030;border-radius:3px;flex-shrink:0"></div>Plains</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#b07a10;border-radius:3px;flex-shrink:0"></div>Desert</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#0c2860;border-radius:3px;flex-shrink:0"></div>Ocean</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#204060;border-radius:3px;flex-shrink:0"></div>Tundra</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#403828;border-radius:3px;flex-shrink:0"></div>Mountain</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#785828;border-radius:3px;flex-shrink:0"></div>Savanna</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#481820;border-radius:3px;flex-shrink:0"></div>Toxic Zone</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#163018;border-radius:3px;flex-shrink:0"></div>Swamp</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#144858;border-radius:3px;flex-shrink:0"></div>Coastal</div>
+    <div style="display:flex;align-items:center;gap:.5rem"><div style="width:14px;height:14px;background:#181c10;border-radius:3px;flex-shrink:0"></div>City</div>
+  </div>
+  <p style="font-size:.7rem;color:var(--t3);margin-top:.8rem">🍄 = Mushroom signature detected. Tap tiles to explore. Green dot = explored.</p>
+</div></div>
+
+<!-- MENU -->
+<div class="mb" id="m-menu"><div class="ms">
+  <div class="mh"></div>
+  <div class="mt"><span>☰ Menu</span><button class="mc" onclick="closeM('m-menu')">✕</button></div>
+  <div id="menu-status" style="font-family:var(--fm);font-size:.62rem;color:var(--t2);margin-bottom:1rem"></div>
+  <button class="btn btn-gh btn-fw mb1" onclick="closeM('m-menu');openM('m-howto')">📖 How to Play</button>
+  <button class="btn btn-gh btn-fw mb1" onclick="closeM('m-menu');openM('m-codex')">🌿 Full Botanica</button>
+  <button class="btn btn-gh btn-fw mb1" onclick="closeM('m-menu');openM('m-synergy')">🔗 Type Synergies</button>
+  <button class="btn btn-r btn-fw" onclick="if(confirm('Reset all progress?')){location.reload()}">🗑 New Game</button>
+</div></div>
+
+<script src="botanica.js"></script>
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+//  VERDANT GRAND BOTANICA — GAME ENGINE
+// ╚══════════════════════════════════════════════════════════╝
+const B = window.BOTANICA;
+const RN = window.RARITY_NAMES;
+const RC = window.RARITY_COLORS;
+
+// ── NAMED FUSION RECIPES ─────────────────────────────────
+const RECIPES = {
+  'daisy+fern+moss':{n:'Forest Sage',c:'researcher',t:1,e:'📖',col:'#70a050',d:'Ground-level wisdom; understands soil and micro-ecosystems.',ab:['Root Network','Ground Truth','Regrow']},
+  'lavender+rose+sunflower':{n:'Luminary Bloom',c:'researcher',t:1,e:'🔬',col:'#c070e8',d:'Radiant scholar who illuminates hidden truths.',ab:['Data Scan','Synthesis','Heal Pulse']},
+  'lotus+orchid+lily':{n:'Serene Analyst',c:'researcher',t:2,e:'🧬',col:'#f090c8',d:'Calm intelligence drawn from sacred waters.',ab:['DNA Read','Bio-Analysis','Calm Aura']},
+  'cherry_blossom+lotus+orchid':{n:'Blossom Oracle',c:'researcher',t:2,e:'🌸',col:'#f8b0d0',d:'Reads petal fractals to predict healing timelines.',ab:['Forecast','Pattern Read','Petal Storm']},
+  'lions_mane+lotus+rose':{n:'Neural Bloom',c:'researcher',t:3,e:'🧠',col:'#f0d8b0',d:"Lion's Mane supercharges neural-like root networks.",ab:['Neural Net','Deep Think','Bloom Burst']},
+  'ghost_orchid+lotus+orchid':{n:'Phantom Intellect',c:'researcher',t:3,e:'👻',col:'#e0f0e8',d:'Near-omniscient entity of pure plant knowledge.',ab:['Phase Read','Total Analysis','Haunt']},
+  'black_lotus+lions_mane+orchid':{n:'Void Researcher',c:'researcher',t:4,e:'⚫',col:'#404060',d:'Supreme analyst bridging science with mystical consciousness.',ab:['Omniscience','Void Sight','Reality Scan']},
+  'salvia+psilocybe_cubensis+lions_mane':{n:'Transcendent Oracle',c:'researcher',t:5,e:'🌀',col:'#8040e0',d:'Entheogen and neural mushroom synergy creates peak consciousness.',ab:['Mind Expand','Truth See','Cosmic Read','Enlighten']},
+  'ayahuasca+blue_lotus+ghost_orchid':{n:'Shaman Seer',c:'researcher',t:4,e:'🌀',col:'#6030b0',d:'Ancient shamanic plant knowledge made manifest.',ab:['Vision Quest','Plant Speech','Deep Journey']},
+  'aloe+moss+water_lily':{n:'Soothing Sprite',c:'healer',t:1,e:'💚',col:'#60d088',d:'Gentle healer from desert and wetland.',ab:['Soothe','Mass Heal','Water Mend']},
+  'aloe+lotus+willow':{n:'Verdant Mender',c:'healer',t:2,e:'🌿',col:'#40a060',d:'Draws from sacred water and weeping wood.',ab:['Ecosystem Restore','Deep Heal','Weep Cure']},
+  'baobab+mangrove+willow':{n:'Titan Healer',c:'healer',t:3,e:'🌳',col:'#807040',d:'Three ancient trees unite; heals entire biomes.',ab:['Biome Restore','Ancient Bark','Root Network']},
+  'aloe+echinacea+reishi':{n:'Immune Sage',c:'healer',t:3,e:'🛡️',col:'#c03820',d:'Reishi amplifies aloe and echinacea into transcendent immune power.',ab:['Immunity Aura','Mass Cure','Fungal Shield']},
+  'oyster+water_lily+willow':{n:'Aqua Shaman',c:'healer',t:2,e:'🌊',col:'#50b0d0',d:'Healer of ocean and freshwater life.',ab:['Aqua Mend','Ocean Pulse','River Song']},
+  'reishi+turkey_tail+aloe':{n:'Fungal Physician',c:'healer',t:3,e:'🍄',col:'#c84020',d:'Twin mushrooms create the ultimate healing companion.',ab:['Total Restore','Fungal Medicine','Spore Surge']},
+  'chaga_siberian+reishi+lions_mane':{n:'Immortal Healer',c:'healer',t:5,e:'🌟',col:'#a0c0ff',d:'Three rarest medicinals. Near-perfect immune mastery.',ab:['Immortal Touch','Cellular Repair','Ancient Medicine','Cell Rebirth']},
+  'kudzu+nightshade+poison_ivy':{n:'Toxin Striker',c:'warrior',t:2,e:'☠️',col:'#90b030',d:'Aggressive attacker weaving poison and relentless growth.',ab:['Toxin Strike','Smothering Grip','Poison Surge']},
+  'venus_flytrap+wolfsbane+nightshade':{n:'Deathrush',c:'warrior',t:3,e:'💀',col:'#c02860',d:'Carnivorous nightmare armed with deadly toxins.',ab:['Snap Attack','Death Aura','Wolfsbane Howl']},
+  'fly_agaric+poison_ivy+wolfsbane':{n:'Crimson Destroyer',c:'warrior',t:3,e:'🍄',col:'#f02020',d:'Fly agaric hallucinogenic berserker.',ab:['Hallucinate','Rage Spores','Crimson Storm']},
+  'death_cap+hemlock+nightshade':{n:'Midnight Reaper',c:'warrior',t:4,e:'💀',col:'#201030',d:"Three of Earth's deadliest — the ultimate war machine.",ab:['Instant Death','Toxic Cloud','Night Terror']},
+  'manchineel+wolfsbane+venus_flytrap':{n:'Armageddon Bloom',c:'warrior',t:4,e:'🌳',col:'#504020',d:"Manchineel, world's most dangerous tree, leads this apex predator.",ab:['Caustic Rain','Doom Bite',"World's End"]},
+  'bleeding_tooth+death_cap+destroying_angel':{n:'Death Triumvirate',c:'warrior',t:5,e:'🩸',col:'#400010',d:'Three lethal mushrooms. The most feared creature in existence.',ab:['Death Spores','Instant Kill','Dark Harvest','Oblivion']},
+  'bamboo+mint+dandelion':{n:'Swift Scout',c:'explorer',t:1,e:'💨',col:'#60e080',d:'Light and fast; first to map new territories.',ab:['Scout Dash','Spore Map','Wind Glide']},
+  'eucalyptus+mint+switchgrass':{n:'Outback Ranger',c:'explorer',t:2,e:'🌿',col:'#90b060',d:'Built for vast wilderness; uncovers hidden continents.',ab:['Wilderness Map','Speed Trail','Heat Endure']},
+  'jade_vine+passionflower+orchid':{n:'Jungle Wayfarer',c:'explorer',t:3,e:'💚',col:'#40c090',d:'Rare jungle vines guide through dense canopy.',ab:['Canopy Glide','Rare Find','Jungle Sense']},
+  'arctic_poppy+edelweiss+purple_saxifrage':{n:'Polar Pioneer',c:'explorer',t:3,e:'❄️',col:'#c0d8f0',d:'Arctic specialist; unlocks tundra and ice regions.',ab:['Frost Walk','Ice Map','Polar Endure']},
+  'seagrass+kelp+mangrove':{n:'Ocean Charmer',c:'explorer',t:2,e:'🌊',col:'#4090b0',d:'Maps ocean floors and discovers sunken biomes.',ab:['Deep Dive','Current Ride','Sonar']},
+  'cordyceps+caterpillar_fungus+mint':{n:'Speed God',c:'explorer',t:4,e:'⚡',col:'#c89030',d:'Cordyceps compounds supercharge speed beyond physical limits.',ab:['Spore Sprint','Hyperspeed','Infect Terrain','Mycelia Map']},
+  'mycena_prime+ghost_fungus+dandelion':{n:'Phantom Pathfinder',c:'explorer',t:4,e:'✨',col:'#00ff88',d:'Living light guides through any darkness.',ab:['Glow Map','Phase Walk','Night Vision','Illuminate']},
+  'oak+sequoia+baobab':{n:'Ancient Fortress',c:'defender',t:3,e:'🏰',col:'#806040',d:'Three ancient trees; an impenetrable living fortress.',ab:['Bark Wall','Root Anchor','Ancient Guard']},
+  'saguaro+mangrove+oak':{n:'Coast Guard',c:'defender',t:2,e:'🛡️',col:'#708040',d:'Protects coastlines from rising seas.',ab:['Tidal Shield','Spine Wall','Root Net']},
+  'ivy+fern+moss':{n:'Living Wall',c:'defender',t:1,e:'🌿',col:'#407040',d:'Fast-growing plants weave a living defensive barrier.',ab:['Wall Grow','Entangle','Thorn Mat']},
+  'chaga+oak+moss':{n:'Iron Bark Guardian',c:'defender',t:3,e:'🟤',col:'#504030',d:'Chaga hardens oak bark to iron strength.',ab:['Iron Shell','Spore Armor','Bark Heal']},
+  'amadou+oak+sequoia':{n:'Fire Warden',c:'defender',t:3,e:'🔥',col:'#c06030',d:'Amadou tinder hardens massive trees against wildfire.',ab:['Fire Ward','Bark Ignite','Smoke Screen']},
+  'dragon_blood_tree+welwitschia+chaga':{n:'Eternal Bastion',c:'defender',t:5,e:'🔴',col:'#8a1510',d:"Dragon's blood and ancient desert plants forge an immortal shield.",ab:['Blood Armor','Namib Wall','Ancient Hold','Eternal Guard']},
+  'rose+shiitake+sunflower':{n:'Dawnguard Bloom',c:'apex',t:2,e:'🌅',col:'#f0a840',d:'First mushroom-flower fusion; dawn guardian with balanced power.',ab:['Dawn Strike','Bloom Burst','Solar Spore']},
+  'lotus+reishi+orchid':{n:'Eternal Lotus',c:'apex',t:3,e:'🪷',col:'#e080c0',d:'Sacred lotus amplified by reishi into near-divine form.',ab:['Eternal Bloom','Divine Heal','Reishi Ward']},
+  'cherry_blossom+matsutake+orchid':{n:'Sakura Titan',c:'apex',t:3,e:'🌸',col:'#f0b0d8',d:'The pinnacle of Asian forest wisdom.',ab:['Sakura Storm','Matsutake Wall','Forest Mind']},
+  'cordyceps+lions_mane+reishi':{n:'Mycelium Oracle',c:'apex',t:4,e:'🧬',col:'#c09030',d:'Three legendary mushrooms; a neural-mycelium consciousness.',ab:['Mycelium Network','Spore Oracle','Mind Spread','Earth Link']},
+  'chaga+death_cap+fly_agaric':{n:'Death Herald',c:'apex',t:4,e:'💀',col:'#302020',d:"Three dark mushrooms forge the most feared creature.",ab:['Death Spores','Toxic Nova',"Herald's Doom",'Life Drain']},
+  'black_lotus+truffle_black+mycena_prime':{n:'Void Bloom',c:'apex',t:5,e:'🌑',col:'#202040',d:'Reality-bending entity of pure botanical power.',ab:['Void Pulse','Reality Warp','Mycelium Rift','Eternal Bloom']},
+  'cordyceps+ghost_orchid+mycena_prime':{n:'Luminous Parasite',c:'apex',t:4,e:'✨',col:'#80f0b0',d:'Cordyceps meets ghost orchid intelligence and glowing mycena.',ab:['Neural Spore','Ghost Phase','Luminous Burst','Parasite Crown']},
+  'bleeding_tooth+truffle_black+cordyceps':{n:'Crimson Seer',c:'apex',t:5,e:'🩸',col:'#800020',d:'The rarest mushroom trio; sees the bleeding heart of Earth.',ab:['Blood See','Truffle Sense','Cordyceps Crown','Heart of Earth']},
+  'black_lotus+cordyceps+ghost_fungus':{n:'Phantom Overmind',c:'apex',t:5,e:'🌑',col:'#303050',d:'Black lotus focuses ghost fungus and cordyceps.',ab:['Phantom Network','Void Control','Ghost Harvest','Transcend']},
+  'welwitschia+baobab+chaga':{n:'Immortal Elder',c:'apex',t:4,e:'🏺',col:'#b09060',d:'Three ancient organisms create an immortal guardian.',ab:['Ancient Ward','Timeless Heal','Deep Root','Epoch Strike']},
+  'void_truffle+earth_heart+mycena_prime':{n:'Genesis Entity',c:'apex',t:6,e:'💚',col:'#004020',d:'Mythic void mushrooms fuse with Earths own consciousness.',ab:['Genesis Pulse','World Speak','Void Bloom','Infinite Grow','Rebirth']},
+  'ayahuasca+psilocybe_cubensis+cordyceps':{n:'Cosmic Wanderer',c:'apex',t:4,e:'🌀',col:'#6020b0',d:'Plant consciousness and neural mushrooms achieve cosmic awareness.',ab:['Astral Project','Mind Expand','Cosmic Map','Transcend']},
+};
+
+// ── WORLD DATA ─────────────────────────────────────────
+const CONTINENTS = {
+  north_america:{n:'North America',e:'🦅',excl:['turkey_tail','ghost_orchid','bleeding_tooth','sequoia','sage','venus_flytrap','saguaro','prickly_pear','switchgrass','echinacea','franklinia','agarikon','morel','indigo_milk_cap'],cost:2},
+  south_america:{n:'South America',e:'🦜',excl:['heliconia','passionflower','dragon_fruit_cactus','ayahuasca','pampas_grass','zombie_ant_fungus','monkey_tail_cactus'],cost:3},
+  europe:{n:'Europe',e:'🏰',excl:['tulip','lavender','wolfsbane','chaga','chaga_siberian','fly_agaric','death_cap','chanterelle','porcini','truffle_black','truffle_white','amadou','amanita_caesarea','destroying_angel','violet_webcap','middlemist_red','parrot_beak','lady_slipper_orchid','hen_egg_fungus','scarlet_elf_cup','waxcap_heath','wrinkled_peach','bleeding_mycena','death_camas'],cost:2},
+  africa:{n:'Africa',e:'🦁',excl:['aloe','bird_of_paradise','baobab','welwitschia','encephalartos','blue_water_lily','blue_lotus','bird_of_paradise','suicide_palm','stone_plant'],cost:3},
+  asia:{n:'Asia',e:'🐉',excl:['ginger','turmeric','orchid','lotus','bamboo','banyan','jade_vine','cherry_blossom','shiitake','reishi','lions_mane','matsutake','matsutake_white','cordyceps','caterpillar_fungus','mycena_prime','mycena_chlorophos','black_lotus','corpse_flower','rafflesia','black_bat_flower','parrot_flower','rothschild_slipper','shenzhen_orchid','kadupul','ice_lotus','mandrake'],cost:4},
+  oceania:{n:'Oceania',e:'🦘',excl:['eucalyptus','ghost_fungus','westem_underground_orchid','kava','staghorn_fern'],cost:4},
+  arctic:{n:'Arctic',e:'🐻‍❄️',excl:['arctic_poppy','edelweiss','purple_saxifrage','moss_campion','snowdrop'],cost:5},
+  middle_east:{n:'Middle East',e:'🌙',excl:['cedar','dragon_blood_tree','palo_santo'],cost:4},
+};
+const GLOBALS=['rose','sunflower','daisy','lily','mint','dandelion','moss','fern','wheat','kelp','water_lily','seagrass','mangrove','willow','chamomile','yarrow','marigold','iris','hibiscus','clubmoss','bladderwort','water_hyacinth','corn','duckweed','sea_lettuce','nori','spirulina'];
+const BIOME_PLANTS_MAP={
+  forest:['oak','moss','fern','turkey_tail','chicken_woods','hen_woods'],
+  jungle:['lotus','orchid','jade_vine','heliconia','passionflower','rafflesia'],
+  plains:['sunflower','wheat','dandelion','switchgrass','sage','chamomile'],
+  desert:['saguaro','aloe','prickly_pear','welwitschia','ashwagandha','datura','peyote'],
+  ocean:['kelp','seagrass','bladderwort'],tundra:['arctic_poppy','edelweiss','moss_campion'],
+  mountain:['wolfsbane','edelweiss','ginseng','monkshood','ginseng_wild'],
+  savanna:['baobab','bird_of_paradise','bluewort'],toxic:['poison_ivy','nightshade','hemlock','death_camas'],
+  swamp:['venus_flytrap','mangrove','water_lily','bladderwort'],
+  coastal:['mangrove','seagrass','kelp','manchineel'],city:[],ruins:[]
+};
+
+const PLANETS=[
+  {id:'earth',n:'Earth',e:'🌍',type:'Terran',col:'#3090e0',glow:'rgba(48,144,224,.4)',status:'home',unlocked:true,req:'Your home world',d:'Stabilize all 8 biomes to heal Earth and unlock interstellar colonization.',sr:0},
+  {id:'proxima',n:'Proxima Centauri b',e:'🌑',type:'Rocky',col:'#808090',glow:'rgba(128,128,144,.3)',status:'locked',unlocked:false,req:'Stabilize 3 biomes',d:'Nearest exoplanet. 4.2 light years. Rocky terrain but stable. Mycelium networks could spread.',sr:1},
+  {id:'kepler22',n:'Kepler-22b',e:'🌊',type:'Ocean World',col:'#2050c0',glow:'rgba(32,80,192,.4)',status:'locked',unlocked:false,req:'Stabilize 5 biomes',d:'Super-Earth ocean world. Aquatic plant life will explode in its vast seas.',sr:2},
+  {id:'trappist',n:'TRAPPIST-1e',e:'🪨',type:'Temperate',col:'#c05020',glow:'rgba(192,80,32,.3)',status:'locked',unlocked:false,req:'Stabilize 6 biomes',d:'Temperate rocky world in red dwarf system. Toxic plants evolve unique adaptations here.',sr:2},
+  {id:'gliese',n:'Gliese 667Cc',e:'🌿',type:'Super-Earth',col:'#28a038',glow:'rgba(40,160,56,.4)',status:'locked',unlocked:false,req:'Stabilize 7 biomes',d:'Super-Earth with conditions ideal for accelerated evolution. Apex creatures evolve rapidly.',sr:3},
+  {id:'tau_ceti',n:'Tau Ceti e',e:'☀️',type:'Arid',col:'#e0a020',glow:'rgba(224,160,32,.4)',status:'locked',unlocked:false,req:'Restore all biomes',d:'Hot arid world. Desert and toxic plants transform into near-divine forms in its harsh climate.',sr:3},
+];
+
+const DISTRICTS=[
+  {id:'nursery',n:'Plant Nursery',e:'🌱',d:'Discovery rate +25%.',cost:{s:60},built:false,unlocked:true,bonus:'🌿 +25% plant finds'},
+  {id:'lab',n:'Research Lab',e:'🔬',d:'Researchers gain +2 INT.',cost:{s:80,sp:2},built:false,unlocked:true,bonus:'🔬 Researchers +2 INT'},
+  {id:'forge',n:'Ancient Forge',e:'⚗️',d:'Fusions cost 1 fewer Spore Charge.',cost:{s:100,sp:3},built:false,unlocked:true,bonus:'⚗️ Fusion -1 spore'},
+  {id:'barracks',n:'War Barracks',e:'⚔️',d:'Warriors gain +3 ATK.',cost:{s:80,sp:2},built:false,unlocked:true,bonus:'⚔️ Warriors +3 ATK'},
+  {id:'observatory',n:'Star Observatory',e:'🔭',d:'Reveals planetary systems.',cost:{s:120,sp:4},built:false,unlocked:false,bonus:'🔭 Reveal planets'},
+  {id:'spore_vault',n:'Spore Vault',e:'🧫',d:'+2 Spore Charges per turn.',cost:{s:150,sp:5},built:false,unlocked:false,bonus:'🧫 +2 spores/turn'},
+  {id:'mycelium_net',n:'Mycelium Network',e:'🕸️',d:'All creatures regen 1 HP/turn.',cost:{s:200,sp:6},built:false,unlocked:false,bonus:'🕸️ All regen +1/turn'},
+  {id:'exodus_bay',n:'Exodus Bay',e:'🚀',d:'Enables planetary seeding.',cost:{s:250,sp:8},built:false,unlocked:false,bonus:'🚀 Seed planets'},
+];
+
+const RIVALS=[
+  {n:'Director Chen',ag:'science',e:'🔬',tag:'Science Coalition',sk:{n:'Lab Fungus',e:'🧪',c:'researcher',stats:{atk:6,def:5,int:8,spd:4,heal:3},mhp:80,hp:80,ab:['Analyze','Bio-Strike']}},
+  {n:'General Thorn',ag:'war',e:'⚔️',tag:'Iron Vanguard',sk:{n:'War Briar',e:'🌵',c:'warrior',stats:{atk:13,def:7,int:2,spd:6,heal:1},mhp:95,hp:95,ab:['Slash','Thorn Rain']}},
+  {n:'Elder Fern',ag:'nature',e:'🌿',tag:'Green Circle',sk:{n:'Ancient Grove',e:'🌳',c:'healer',stats:{atk:4,def:9,int:5,spd:2,heal:13},mhp:125,hp:125,ab:['Root Wall','Mass Heal']}},
+  {n:'Navigator Sol',ag:'exodus',e:'🚀',tag:'Stellar Ark',sk:{n:'Cosmic Spore',e:'🌌',c:'explorer',stats:{atk:8,def:6,int:8,spd:12,heal:4},mhp:75,hp:75,ab:['Phase Dash','Star Map']}},
+  {n:'Shaman Mycos',ag:'war',e:'💀',tag:'Rot Brotherhood',sk:{n:'Death Bloom',e:'💀',c:'warrior',stats:{atk:16,def:5,int:6,spd:5,heal:0},mhp:88,hp:88,ab:['Death Touch','Spore Nova']}},
+];
+
+const AGENDAS={
+  science:{n:'Science & Research',e:'🔬',col:'#30a0e8',d:'Study Earth\'s ailments. Develop cures. Build a global research network.',bonus:'Researchers +20% stats',win:'80% progress'},
+  nature:{n:'Nature & Harmony',e:'🌿',col:'#48d050',d:'Heal damaged biomes. Restore extinct species. Let Earth regenerate.',bonus:'Healers and Defenders thrive',win:'All 8 biomes at 70%+'},
+  war:{n:'War & Defense',e:'⚔️',col:'#e83030',d:'Defeat rival Defenders. Secure resources by force.',bonus:'Warriors +20% ATK',win:'Defeat 5 rival Defenders'},
+  exodus:{n:'Planetary Exodus',e:'🚀',col:'#30d8b0',d:'Seed new worlds. Find humanity a new home among the stars.',bonus:'Explorer and Apex creatures unlock faster',win:'Seed life on 3 new planets'},
+};
+
+// ── GAME STATE ─────────────────────────────────────────
+const G={
+  turn:1,energy:10,maxE:10,seeds:80,spores:3,crisis:18,
+  disc:new Set(['rose','sunflower','daisy','lily','mint','dandelion','moss','fern','wheat']),
+  inv:{rose:3,sunflower:2,daisy:2,lily:1,mint:2,dandelion:3,moss:2,fern:2,wheat:3},
+  creatures:[],districts:JSON.parse(JSON.stringify(DISTRICTS)),
+  planets:JSON.parse(JSON.stringify(PLANETS)),
+  biomes:{amazon:62,arctic:48,coral:32,savanna:70,forests:65,oceans:38,wetlands:55,mountains:80},
+  agenda:null,prog:{science:0,nature:0,war:0,exodus:0},
+  battles:[],bState:null,cauldron:[null,null,null,null],
+  pFilter:'all',cFilter:'all',victories:[],
+  hexGrid:[],mScale:1,selHex:null,newPlants:new Set(),
+};
+
+// ── HEX MAP ─────────────────────────────────────────────
+const HR=26,GCOLS=22,GROWS=14;
+const BCOLORS={forest:'#1a3810',jungle:'#122810',plains:'#587030',desert:'#b07a10',ocean:'#0c2860',ocean_deep:'#091848',tundra:'#204060',mountain:'#403828',savanna:'#785828',toxic:'#481820',swamp:'#163018',coastal:'#144858',city:'#1a2010',ruins:'#201808'};
+const BMAP={F:'forest',J:'jungle',P:'plains',D:'desert',O:'ocean',T:'tundra',M:'mountain',S:'savanna',X:'toxic',W:'swamp',C:'coastal',Y:'city',R:'ruins'};
+const WTPL=[
+  'OOOOOOOOOOOOOOOOOOOOOO','OOOOOOTTTTTOOOOOOOOOO','OOOFFTTTMMPPSOOOOOOOO',
+  'OOFFFTMMMMPPPSSOOOOOO','OOPPPPMMMPPDDSSOOCOOO','OOOPPPPPPPDDDDSSOCCOO',
+  'OPPPYJFFPPDDSSXOOOCOO','PPPPFFFJJWWWSSDXOOOOO','OOPFFFJJJJWWWXDDOOOOO',
+  'OOOCCCJJJJWWXDDDOOOOO','OOOOCCCCJWWWDDDDOOOOO','OOOOOCCCCCDDDDOOOOOO',
+  'OOOOOOOOCCCOOOOOOOOO','OOOOOOOOOOOOOOOOOOOO'
+];
+
+function getContinent(row,col){
+  if(row<=2) return 'arctic';
+  if(col<=2) return 'north_america';
+  if(col>=19) return 'asia';
+  if(row<=5&&col>=10) return 'europe';
+  if(row>=8&&col<=7) return 'south_america';
+  if(row>=6&&col>=13) return 'africa';
+  if(row>=9&&col>=8) return 'oceania';
+  return 'north_america';
+}
+
+function buildHex(){
+  G.hexGrid=[];
+  for(let r=0;r<GROWS;r++){
+    for(let c=0;c<GCOLS;c++){
+      const ch=WTPL[r]?.[c]||'O';
+      const biome=BMAP[ch]||'ocean';
+      const x=c*HR*1.732+(r%2)*HR*0.866+HR;
+      const y=r*HR*1.5+HR;
+      const cont=getContinent(r,c);
+      const cData=CONTINENTS[cont];
+      const cExcl=(cData?.excl||[]).filter(id=>B[id]);
+      const bp=(BIOME_PLANTS_MAP[biome]||[]).filter(id=>B[id]);
+      const pool=[...new Set([...bp,...cExcl,...GLOBALS])].filter(id=>B[id]);
+      const plants=pool.slice(0,4+Math.floor(Math.random()*4));
+      G.hexGrid.push({r,c,biome,x,y,explored:false,plants,continent:cont,
+        hasMush:plants.some(id=>B[id]?.type==='mushroom')});
+    }
+  }
+}
+
+let canvas,ctx;
+function initMap(){
+  canvas=document.getElementById('wcanvas');
+  ctx=canvas.getContext('2d');
+  resizeMap();
+  canvas.addEventListener('click',onMapClick);
+  canvas.addEventListener('touchend',onMapTouch,{passive:true});
+  drawMap();
+}
+function resizeMap(){
+  const s=G.mScale;
+  const w=(GCOLS*HR*1.732+HR*2)*s;
+  const h=(GROWS*HR*1.5+HR*2)*s;
+  canvas.width=w;canvas.height=h;
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+}
+function zM(d){G.mScale=Math.max(.5,Math.min(2,G.mScale+d*.2));resizeMap();drawMap();}
+function drawMap(){
+  if(!ctx) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  G.hexGrid.forEach(h=>drawHex(h));
+}
+function drawHex(h){
+  const s=G.mScale,cx=h.x*s,cy=h.y*s,r=HR*s;
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const a=(Math.PI/180)*(60*i-30);
+    const px=cx+r*Math.cos(a),py=cy+r*Math.sin(a);
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+  let fc=BCOLORS[h.biome]||'#1a2810';
+  if(h.explored) fc=lightenHex(fc,35);
+  ctx.fillStyle=fc;ctx.fill();
+  ctx.strokeStyle=h.explored?'rgba(88,216,56,.5)':'rgba(0,0,0,.5)';
+  ctx.lineWidth=.7*s;ctx.stroke();
+  // Mushroom glow
+  if(h.hasMush&&!h.explored){
+    ctx.fillStyle='rgba(240,152,48,.2)';ctx.fill();
+  }
+  // Explored dot
+  if(h.explored){
+    ctx.fillStyle='rgba(88,216,56,.8)';
+    ctx.beginPath();ctx.arc(cx,cy,2.5*s,0,Math.PI*2);ctx.fill();
+  }
+  // Biome icon
+  if(h.biome!=='ocean'&&h.biome!=='ocean_deep'){
+    const em={forest:'🌲',jungle:'🌿',plains:'🌾',desert:'🏜',tundra:'❄',mountain:'⛰',savanna:'🦁',toxic:'☠',swamp:'🌊',coastal:'🐚',city:'🏙',ruins:'🏛'}[h.biome]||'';
+    if(em){
+      ctx.font=`${7*s}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.globalAlpha=.25;ctx.fillStyle='#fff';
+      ctx.fillText(em,cx,cy);ctx.globalAlpha=1;
+    }
+  }
+}
+function lightenHex(hex,a){
+  try{const c=parseInt(hex.slice(1),16);return'#'+[((c>>16)&255),(( c>>8)&255),(c&255)].map(v=>Math.min(255,v+a).toString(16).padStart(2,'0')).join('');}catch{return hex;}
+}
+function onMapClick(e){
+  const rect=canvas.getBoundingClientRect();
+  tapMap((e.clientX-rect.left)/G.mScale,(e.clientY-rect.top)/G.mScale);
+}
+function onMapTouch(e){
+  const rect=canvas.getBoundingClientRect();
+  const t=e.changedTouches[0];
+  tapMap((t.clientX-rect.left)/G.mScale,(t.clientY-rect.top)/G.mScale);
+}
+function tapMap(px,py){
+  let best=null,bd=999;
+  G.hexGrid.forEach(h=>{const d=Math.sqrt((h.x-px)**2+(h.y-py)**2);if(d<bd){bd=d;best=h;}});
+  if(best&&bd<HR*1.4) openHexSheet(best);
+}
+function openHexSheet(hex){
+  const c=CONTINENTS[hex.continent];
+  const cost=(c?.cost||2);
+  const canEx=G.energy>=cost&&!hex.explored;
+  const plantNames=hex.plants.map(id=>B[id]).filter(Boolean);
+  const idx=G.hexGrid.indexOf(hex);
+  document.getElementById('m-tile-c').innerHTML=`
+    <div class="mt"><span>${getBiomeEmoji(hex.biome)} ${hex.biome.charAt(0).toUpperCase()+hex.biome.slice(1)}</span></div>
+    <div class="tm td" style="font-size:.62rem;margin-bottom:.75rem">${c?.n||''} · ${hex.r},${hex.c}${hex.hasMush?'<br><span style="color:var(--amber)">🍄 Rare mushroom signature!</span>':''}</div>
+    ${hex.explored?'<span class="badge bgreen mb1">✓ Explored</span>':''}
+    <div style="margin-bottom:.9rem">
+      <div class="tm td" style="font-size:.58rem;margin-bottom:.35rem">PLANTS IN THIS REGION:</div>
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+        ${plantNames.map(p=>`<span style="font-size:.85rem" title="${hex.explored?p.name:'???'}">${hex.explored?p.e:'❓'} <span class="tm td" style="font-size:.55rem">${hex.explored?p.name:'???'}</span></span>`).join('')}
+      </div>
+    </div>
+    ${!hex.explored?`
+      <div class="tm" style="font-size:.6rem;color:var(--amber);margin-bottom:.75rem">⚡ ${cost} energy required</div>
+      <button class="btn btn-p btn-fw${canEx?'':' btn-gh'}" onclick="exploreTile(${idx},false)" ${canEx?'':'disabled'}>${canEx?'🔍 Explore':'⚡ Not Enough Energy'}</button>
+      ${hex.hasMush&&G.energy>=cost*2?`<button class="btn btn-g btn-fw mt1" onclick="exploreTile(${idx},true)">🍄 Mushroom Hunt (⚡${cost*2})</button>`:''}
+    `:`<p class="ts td" style="font-style:italic">This tile has been explored.</p>`}`;
+  openM('m-tile');
+}
+function getBiomeEmoji(b){return{forest:'🌲',jungle:'🌿',plains:'🌾',desert:'🏜',ocean:'🌊',tundra:'❄️',mountain:'⛰️',savanna:'🌅',toxic:'☠️',swamp:'🌊',coastal:'🐚',city:'🏙️',ruins:'🏛️'}[b]||'🌍';}
+
+function exploreTile(idx,mush){
+  const hex=G.hexGrid[idx];if(!hex||hex.explored) return;
+  const c=CONTINENTS[hex.continent];
+  const cost=(c?.cost||2)*(mush?2:1);
+  if(G.energy<cost){toast('Not enough energy!','er');return;}
+  G.energy-=cost;hex.explored=true;
+  const pool=mush?[...hex.plants,...(c?.excl||[])].filter(id=>B[id]):
+    [...hex.plants,...GLOBALS].filter(id=>B[id]&&B[id].type!=='mushroom');
+  const finds=[];
+  for(let i=0;i<3+Math.floor(Math.random()*4);i++){
+    const id=pool[Math.floor(Math.random()*pool.length)];
+    if(!id) continue;
+    const p=B[id];if(!p) continue;
+    const chance=calcDropChance(id,mush)*(G.districts.find(d=>d.id==='nursery'&&d.built)?1.25:1);
+    if(Math.random()<chance){
+      G.disc.add(id);G.inv[id]=(G.inv[id]||0)+1;
+      finds.push(p);G.newPlants.add(id);
+    }
+  }
+  const bk=Object.keys(G.biomes)[Math.floor(Math.random()*8)];
+  G.biomes[bk]=Math.min(100,G.biomes[bk]+2);
+  G.seeds+=finds.length*5+4;
+  if(G.agenda) G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+4);
+  drawMap();updateHUD();checkVic();
+  const ms=finds.filter(p=>p.type==='mushroom');
+  if(!finds.length) toast('Nothing new found...','er');
+  else if(ms.length) toast(`🍄 RARE! ${finds.map(p=>p.e+' '+p.n).join(', ')}!`,'mu');
+  else toast(`🌿 Found: ${finds.map(p=>p.e+' '+p.n).join(', ')}`,'ok');
+  closeM('m-tile');renderPlants();renderPRow();updateNavBadges();
+}
+
+// ── PLANT RENDERING ──────────────────────────────────────
+function renderPlants(filter,search){
+  filter=filter||G.pFilter;
+  const grid=document.getElementById('pgrid');if(!grid) return;
+  let plants=Object.values(B);
+  if(filter==='owned') plants=plants.filter(p=>G.disc.has(p.id));
+  else if(filter!=='all') plants=plants.filter(p=>p.type===filter);
+  const q=(typeof search==='string'?search:(document.getElementById('ps-in')?.value||'')).toLowerCase();
+  if(q) plants=plants.filter(p=>p.n.toLowerCase().includes(q)||p.type.toLowerCase().includes(q)||(p.sci||'').toLowerCase().includes(q));
+  document.getElementById('p-count').textContent=`${plants.length} species${filter!=='all'?' (filtered)':''}`;
+  grid.innerHTML=plants.map(p=>{
+    const disc=G.disc.has(p.id);const qty=G.inv[p.id]||0;
+    return`<div class="pc${disc?'':' undisc'}" onclick="${disc?`openPlant('${p.id}')`:''}"${disc?'':' style="cursor:default"'}>
+      <div class="prr" style="background:${RC[p.r]||RC[1]}"></div>
+      <span class="pe">${disc?p.e:'❓'}</span>
+      <div class="pn">${disc?p.n:'???'}</div>
+      <div class="pt">${p.type}</div>
+      ${disc?`<div class="psci">${p.sci||''}</div><span class="pq">×${qty}</span>`:
+        `<div class="pt" style="margin-top:.2rem;font-size:.45rem;color:var(--t4)">📍${(p.con||'').replace(/_/g,' ')}</div>`}
+      ${p.type==='mushroom'?'<div class="pmush">RARE</div>':''}
+    </div>`;
+  }).join('');
+}
+function fP(f,btn){
+  G.pFilter=f;
+  document.querySelectorAll('#pf .fb').forEach(b=>b.classList.remove('on'));
+  btn?.classList.add('on');renderPlants(f);
+}
+function sP(q){renderPlants(G.pFilter,q);}
+function renderPRow(){
+  const el=document.getElementById('pr-row');if(!el) return;
+  const total=Object.values(G.inv).reduce((a,b)=>a+b,0);
+  el.innerHTML=`<div class="rp">🌿 <span class="rv">${total}</span> total</div>
+    <div class="rp">📖 <span class="rv">${G.disc.size}</span>/${Object.keys(B).length} found</div>
+    <div class="rp">🍄 <span class="rv">${[...G.disc].filter(id=>B[id]?.type==='mushroom').length}</span> mushrooms</div>`;
+}
+
+function openPlant(id){
+  const p=B[id];if(!p) return;
+  const qty=G.inv[id]||0;
+  document.getElementById('m-plant-c').innerHTML=`
+    <div class="tc mb1"><span style="font-size:3.5rem">${p.e}</span>
+    <div class="mt" style="margin-top:.35rem;justify-content:center;gap:.4rem"><span>${p.n}</span></div>
+    <div style="font-style:italic;font-size:.72rem;color:var(--t3);margin-bottom:.4rem">${p.sci||''}</div>
+    <span class="badge" style="background:rgba(88,216,56,.1);color:${RC[p.r]};border:1px solid ${RC[p.r]}40">${RN[p.r]||'Common'} R${p.r}</span>
+    <span class="badge bblue" style="margin-left:.3rem">${p.type}</span></div>
+    <div class="tm td" style="font-size:.6rem;margin:.6rem 0">📍 ${(p.con||'').replace(/_/g,' ')} · ${(p.biome||'').replace(/_/g,' ')}</div>
+    <div class="lore" style="font-size:.75rem;margin-bottom:.9rem">"${p.flavor||'A remarkable botanical specimen.'}"</div>
+    ${['atk','def','int','spd','heal','toxic','aura'].map(s=>`<div class="sr"><span class="sl">${s}</span><div class="sb2"><div class="sf ${s}-f" style="width:${Math.min(100,Math.round((p.stats[s]||0)/15*100))}%"></div></div><span class="sv">${p.stats[s]||0}</span></div>`).join('')}
+    <div class="tm td" style="font-size:.62rem;margin:.75rem 0">Inventory: <strong style="color:var(--green)">×${qty}</strong></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn btn-p btn-sm" onclick="addToC('${id}');closeM('m-plant')">⚗️ Add to Cauldron</button>
+      ${p.type==='mushroom'?`<button class="btn btn-g btn-sm" onclick="showMushroomHint('${id}')">🍄 Where to Find</button>`:''}
+    </div>`;
+  openM('m-plant');
+}
+function showMushroomHint(id){
+  const p=B[id];const c=CONTINENTS[p.con];
+  toast(`🍄 ${p.n} grows in ${c?.n||p.con} (${(p.biome||'').replace(/_/g,' ')} biomes) · ⚡${c?.cost||3} energy · ${RN[p.r]} rarity`,'mu');
+}
+
+// ── CAULDRON ────────────────────────────────────────────
+function renderCauldron(){
+  const ring=document.getElementById('cring');if(!ring) return;
+  ring.innerHTML=G.cauldron.map((id,i)=>{
+    if(id){const p=B[id];return`<div class="cs filled"><span class="sem">${p.e}</span><span class="sn">${p.n}</span><span class="sx" onclick="removeC(${i})">✕</span></div>`;}
+    return`<div class="cs" onclick="openPicker(${i})"><span style="font-size:1.5rem;color:var(--b2)">+</span><span style="font-family:var(--fm);font-size:.48rem;color:var(--t3)">add</span></div>`;
+  }).join('');
+  renderCauldronCreatures();
+}
+function addToC(id){
+  if(!G.inv[id]||G.inv[id]===0){toast('No '+B[id]?.n+' in inventory!','er');return;}
+  const e=G.cauldron.indexOf(null);if(e===-1){toast('Cauldron full!','er');return;}
+  G.cauldron[e]=id;renderCauldron();toast(`${B[id].e} Added to cauldron`,'ok');sTab('cauldron');
+}
+function removeC(i){
+  G.cauldron[i]=null;
+  const f=G.cauldron.filter(Boolean);
+  G.cauldron=[...f,...Array(4-f.length).fill(null)];renderCauldron();
+}
+function clearC(){G.cauldron=[null,null,null,null];document.getElementById('fr').classList.remove('on');renderCauldron();}
+function openPicker(si){
+  const disc=[...G.disc].filter(id=>G.inv[id]>0);
+  document.getElementById('picker-title').textContent=`Select for Slot ${si+1}`;
+  document.getElementById('picker-grid').innerHTML=disc.map(id=>{
+    const p=B[id];
+    return`<div class="pc" onclick="G.cauldron[${si}]='${id}';renderCauldron();closeM('m-picker')">
+      <div class="prr" style="background:${RC[p.r]||RC[1]}"></div>
+      <span class="pe">${p.e}</span><div class="pn">${p.n}</div>
+      <div class="pt">×${G.inv[id]}</div>
+      ${p.type==='mushroom'?'<div class="pmush">RARE</div>':''}
+    </div>`;
+  }).join('');
+  openM('m-picker');
+}
+
+function doFuse(){
+  const ings=G.cauldron.filter(Boolean);
+  if(ings.length<2){toast('Add at least 2 plants!','er');return;}
+  const forgeCost=G.districts.find(d=>d.id==='forge'&&d.built)?0:1;
+  if(G.spores<Math.max(1,forgeCost)){toast('Need ⚗️ Spore Charges!','er');return;}
+  const needed={};
+  for(const id of ings) needed[id]=(needed[id]||0)+1;
+  for(const[id,qty] of Object.entries(needed)){
+    if((G.inv[id]||0)<qty){toast(`Not enough ${B[id]?.n}!`,'er');return;}
+  }
+  G.spores-=Math.max(1,forgeCost);
+  for(const[id,qty] of Object.entries(needed)) G.inv[id]-=qty;
+
+  const creature=buildCreature(ings);
+  G.creatures.push(creature);
+  G.cauldron=[null,null,null,null];
+  document.getElementById('fr').classList.add('on');
+  const isApex=creature.c==='apex';
+  document.getElementById('fr').innerHTML=`
+    <div style="font-size:2.8rem;margin-bottom:.4rem${isApex?';animation:perf 1s ease-in-out infinite':''}">${creature.e}</div>
+    ${isApex?'<div class="badge bgold" style="margin-bottom:.4rem;font-size:.65rem">✨ APEX CREATURE FORGED</div>':''}
+    <div style="font-family:var(--fd);font-size:1rem;color:var(--green);margin-bottom:.2rem">${creature.n}</div>
+    <span class="ccls cls-${creature.c[0]}">${creature.c.toUpperCase()} · T${creature.t}</span>
+    <p style="font-size:.75rem;color:var(--t2);margin:.6rem 0">${creature.d}</p>
+    <div style="display:flex;justify-content:center;gap:.3rem;flex-wrap:wrap;margin:.5rem 0">
+      ${['atk','def','int','spd','heal'].map(s=>`<span class="badge b${s==='atk'?'red':s==='def'?'blue':s==='int'?'purp':'green'}">${s.toUpperCase()} ${creature.stats[s]||0}</span>`).join('')}
+    </div>
+    <div class="cabs" style="justify-content:center">${(creature.ab||[]).map(a=>`<span class="ab">${a}</span>`).join('')}</div>
+    <button class="btn btn-p btn-sm mt2" onclick="sTab('creatures')">→ View Creatures</button>`;
+  renderCauldron();updateHUD();
+  if(G.agenda) G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+8);
+  renderAgenda();checkVic();
+  toast(`${isApex?'✨ APEX: ':'🐾 '}${creature.n} forged!`,isApex?'mu':'ok');
+  spawnParticles(isApex?20:8,isApex?'#f0d040':'#58d838');
+}
+
+function buildCreature(ings){
+  const key=[...ings].sort().join('+');
+  const rec=RECIPES[key];
+  const stats=window.calcFusionStats(ings);
+  const rar=window.calcFusionRarity(ings);
+  // District bonuses
+  if(G.districts.find(d=>d.id==='lab'&&d.built)) stats.int+=2;
+  if(G.districts.find(d=>d.id==='barracks'&&d.built)) stats.atk+=3;
+  const mhp=stats.def*10+stats.heal*5+20;
+  if(rec){
+    return{...rec,stats,level:1,xp:0,hp:mhp,mhp,ings,rar};
+  }
+  const cls=window.classFromStats(stats);
+  const n=window.genCreatureName(ings,cls);
+  const mush=ings.filter(id=>B[id]?.type==='mushroom').length;
+  return{n,c:cls,t:1+Math.min(3,mush),e:ings.slice(0,2).map(id=>B[id]?.e||'🌿').join(''),
+    col:B[ings[0]]?.col||'#58d838',d:`A ${cls} born from ${ings.map(id=>B[id]?.n||id).join(', ')}.`,
+    ab:['Strike','Guard','Adapt'],stats,level:1,xp:0,hp:mhp,mhp,ings,rar};
+}
+
+function renderCauldronCreatures(){
+  const g=document.getElementById('cclist');const nn=document.getElementById('ccnone');if(!g) return;
+  if(!G.creatures.length){g.innerHTML='';if(nn)nn.style.display='block';return;}
+  if(nn)nn.style.display='none';
+  g.innerHTML=G.creatures.slice(0,6).map((c,i)=>ccHTML(c,G.creatures.indexOf(c))).join('');
+}
+function renderCreatures(f){
+  f=f||G.cFilter;
+  const g=document.getElementById('cgrid');const nn=document.getElementById('cnone');if(!g) return;
+  let list=G.creatures;if(f!=='all') list=list.filter(c=>c.c===f);
+  if(!list.length){g.innerHTML='';if(nn)nn.style.display='block';return;}
+  if(nn)nn.style.display='none';
+  g.innerHTML=list.map(c=>ccHTML(c,G.creatures.indexOf(c))).join('');
+}
+function ccHTML(c,idx){
+  const hp=Math.round((c.hp/c.mhp)*100);
+  const xp=Math.min(100,Math.round(((c.xp||0)/(c.level*100))*100));
+  const hpC=hp>60?'var(--green)':hp>30?'var(--gold)':'var(--red)';
+  return`<div class="cc" style="--cc-col:${c.col||'var(--green)'}" onclick="openCreature(${idx})">
+    <span class="ccls cls-${c.c?.[0]}">${(c.c||'').toUpperCase()}</span>
+    <span class="clvl">Lv${c.level||1}</span>
+    <span class="cem">${c.e||'🌿'}</span>
+    <div class="cn">${c.n||c.name||'Creature'}</div>
+    <div class="ct">T${c.t||1} · ${c.hp||0}/${c.mhp||1} HP</div>
+    <div class="cstats">${['atk','def','int','spd','heal'].map(s=>`<div class="cst"><span class="v">${c.stats?.[s]||0}</span>${s.toUpperCase()}</div>`).join('')}</div>
+    <div class="hpb"><div class="hpf" style="width:${hp}%;background:${hpC}"></div></div>
+    <div class="xpb"><div class="xpf" style="width:${xp}%"></div></div>
+    <div class="cabs">${(c.ab||[]).slice(0,3).map(a=>`<span class="ab">${a}</span>`).join('')}</div>
+  </div>`;
+}
+function fC(f,btn){
+  G.cFilter=f;
+  document.querySelectorAll('#cf .fb').forEach(b=>b.classList.remove('on'));
+  btn?.classList.add('on');renderCreatures(f);
+}
+function openCreature(idx){
+  const c=G.creatures[idx];if(!c) return;
+  document.getElementById('m-creature-c').innerHTML=`
+    <div class="tc mb1"><span style="font-size:4rem">${c.e}</span>
+    <div class="mt" style="margin-top:.35rem;justify-content:center"><span>${c.n||c.name}</span></div>
+    <span class="ccls cls-${c.c?.[0]}">${(c.c||'').toUpperCase()} · TIER ${c.t}</span></div>
+    <p style="font-size:.8rem;color:var(--t2);margin:1rem 0;line-height:1.6">${c.d||''}</p>
+    <div class="tm td" style="font-size:.6rem;margin-bottom:.6rem">Lv${c.level} · ${c.xp||0}/${c.level*100} XP · ${c.hp}/${c.mhp} HP</div>
+    ${['atk','def','int','spd','heal','toxic','aura'].filter(s=>c.stats?.[s]).map(s=>`<div class="sr"><span class="sl">${s}</span><div class="sb2"><div class="sf ${s}-f" style="width:${Math.min(100,Math.round((c.stats[s]||0)/25*100))}%"></div></div><span class="sv">${c.stats[s]||0}</span></div>`).join('')}
+    <div style="margin:1rem 0"><div class="tm td" style="font-size:.58rem;margin-bottom:.35rem">ABILITIES</div>
+    <div class="cabs">${(c.ab||[]).map(a=>`<span class="ab" style="font-size:.6rem;padding:.2rem .45rem">${a}</span>`).join('')}</div></div>
+    <div style="margin-bottom:1rem"><div class="tm td" style="font-size:.58rem;margin-bottom:.35rem">FORGED FROM</div>
+    <div style="display:flex;gap:.3rem;flex-wrap:wrap">${(c.ings||[]).map(id=>`<span class="badge bgreen">${B[id]?.e||'🌿'} ${B[id]?.n||id}</span>`).join('')}</div></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn btn-r btn-sm" onclick="sendToBattle(${idx});closeM('m-creature');sTab('agenda')">⚔️ Battle</button>
+      ${c.c==='apex'?`<button class="btn btn-t btn-sm" onclick="openSeedPanel(${idx});closeM('m-creature')">🚀 Seed Planet</button>`:''}
+    </div>`;
+  openM('m-creature');
+}
+
+// ── WORLDS ──────────────────────────────────────────────
+function renderWorlds(){
+  renderBiomes();renderPlanets();renderDistrictGrid();
+  const bv=Object.values(G.biomes);
+  const avg=Math.round(bv.reduce((a,b)=>a+b,0)/bv.length);
+  const pb=document.getElementById('eppf');const pp=document.getElementById('epppct');
+  if(pb) pb.style.width=avg+'%';if(pp) pp.textContent=avg+'%';
+  const stab=bv.filter(v=>v>=60).length;
+  [3,5,6,7,8].forEach((req,i)=>{if(stab>=req&&G.planets[i+1])G.planets[i+1].unlocked=true;});
+  if(G.districts.find(d=>d.id==='observatory'&&d.built)) G.planets.forEach(p=>p.unlocked=true);
+}
+function renderBiomes(){
+  const g=document.getElementById('biog');if(!g) return;
+  const bs=[{id:'amazon',n:'Amazon',e:'🌿'},{id:'arctic',n:'Arctic',e:'🧊'},{id:'coral',n:'Coral Reefs',e:'🐠'},{id:'savanna',n:'Savanna',e:'🦁'},{id:'forests',n:'Forests',e:'🌲'},{id:'oceans',n:'Oceans',e:'🌊'},{id:'wetlands',n:'Wetlands',e:'🦢'},{id:'mountains',n:'Mountains',e:'⛰️'}];
+  g.innerHTML=bs.map(b=>{
+    const h=G.biomes[b.id]||50;
+    const col=h>=70?'#48d050':h>=40?'#e0c040':'#e04040';
+    return`<div class="bioc"><span class="bioe">${b.e}</span><div class="bion">${b.n}</div><div class="biop" style="color:${col}">${h}%</div><div class="biob"><div class="biof" style="width:${h}%;background:${col}"></div></div></div>`;
+  }).join('');
+}
+function renderPlanets(){
+  const g=document.getElementById('wg');if(!g) return;
+  g.innerHTML=G.planets.map(p=>{
+    const sb={locked:'bred',home:'bblue',unlocked:'bamber',seeded:'bgreen'}[p.seeded?'seeded':!p.unlocked?'locked':p.id==='earth'?'home':'unlocked']||'bblue';
+    return`<div class="wc${!p.unlocked?' lk':''}${p.id==='earth'?' aw':''}" style="--wg:${p.col}" onclick="${p.unlocked?`openPlanet('${p.id}')`:''}" >
+      ${!p.unlocked?'<span class="wcl">🔒</span>':''}
+      <span class="wce" style="filter:drop-shadow(0 0 12px ${p.col})">${p.e}</span>
+      <div class="wcn">${p.n}</div>
+      <div class="wct">${p.type}</div>
+      <span class="badge ${sb}">${(p.seeded?'SEEDED':!p.unlocked?'LOCKED':p.id==='earth'?'HOME':'READY').toUpperCase()}</span>
+      ${!p.unlocked?`<div class="tm td" style="font-size:.52rem;margin-top:.35rem">${p.req}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function openPlanet(id){
+  const p=G.planets.find(x=>x.id===id);if(!p) return;
+  const canSeed=p.unlocked&&!p.seeded&&p.id!=='earth'&&G.districts.find(d=>d.id==='exodus_bay'&&d.built);
+  const apexList=G.creatures.filter(c=>c.c==='apex');
+  document.getElementById('m-planet-c').innerHTML=`
+    <div class="tc mb1"><span style="font-size:4rem;filter:drop-shadow(0 0 20px ${p.col})">${p.e}</span>
+    <div class="mt" style="margin-top:.35rem;justify-content:center"><span>${p.n}</span></div>
+    <span class="badge bblue">${p.type}</span></div>
+    <p style="font-size:.8rem;color:var(--t2);margin:1rem 0;line-height:1.7">${p.d}</p>
+    ${!p.unlocked?`<span class="badge bred">🔒 ${p.req}</span>`:''}
+    ${p.seeded?`<div style="margin:1rem 0"><span class="badge bgreen" style="font-size:.65rem;padding:.3rem .7rem">✓ SEEDED by ${p.seededBy||'Apex Creature'}</span><p class="ts td mt1">This world now contributes to your Exodus victory score.</p></div>`:''}
+    ${canSeed?`<div style="margin:1rem 0"><p style="font-size:.75rem;color:var(--teal);margin-bottom:.7rem">🚀 Exodus Bay ready. Select an Apex creature to seed this world.</p>
+    <div class="grid-creatures">${apexList.map(c=>`<div class="cc" style="--cc-col:${c.col||'var(--green)'}" onclick="seedPlanet('${id}',${G.creatures.indexOf(c)})"><span class="cem" style="font-size:1.8rem">${c.e}</span><div class="cn" style="font-size:.75rem">${c.n||c.name}</div><span class="ccls cls-a">APEX</span></div>`).join('')||'<p class="ts td">No Apex creatures yet.</p>'}</div></div>`:''}
+    ${!canSeed&&p.unlocked&&!p.seeded&&p.id!=='earth'?`<p class="ts td mt1">Build the Exodus Bay district to enable seeding missions.</p>`:''}`;
+  openM('m-planet');
+}
+function openSeedPanel(ci){
+  const unlocked=G.planets.filter(p=>p.unlocked&&!p.seeded&&p.id!=='earth');
+  if(!unlocked.length){toast('No planets ready. Stabilize biomes first.','er');return;}
+  openPlanet(unlocked[0].id);
+}
+function seedPlanet(pid,ci){
+  const p=G.planets.find(x=>x.id===pid);if(!p||p.seeded) return;
+  const c=G.creatures[ci];if(!c) return;
+  p.seeded=true;p.seededBy=c.n||c.name;
+  G.prog.exodus=Math.min(100,(G.prog.exodus||0)+35);G.seeds+=100;
+  closeM('m-planet');renderWorlds();renderAgenda();checkVic();
+  toast(`🚀 ${c.n||c.name} seeded ${p.n}! Life spreads across the stars.`,'mu');
+  spawnParticles(25,'#30d8b0');
+}
+function renderDistrictGrid(){
+  const g=document.getElementById('dg');if(!g) return;
+  if(G.turn>=5) G.districts.forEach(d=>{if(['observatory','spore_vault'].includes(d.id))d.unlocked=true;});
+  if(G.turn>=8) G.districts.forEach(d=>{if(['mycelium_net','exodus_bay'].includes(d.id))d.unlocked=true;});
+  g.innerHTML=G.districts.map(d=>`
+    <div class="dc${d.built?' built':''}${!d.unlocked?' lk2':''}" onclick="${d.unlocked&&!d.built?`buildDistrict('${d.id}')`:''}" style="cursor:${d.unlocked&&!d.built?'pointer':'default'}">
+      <span class="dce">${d.e}</span><div class="dcn">${d.n}</div><div class="dcd">${d.d}</div>
+      ${d.built?`<span class="dcb">✓ BUILT</span><div class="dcc">${d.bonus}</div>`:`<div class="dcc">🪙${d.cost.s||0}${d.cost.sp?` ⚗️${d.cost.sp}`:''}</div>`}
+      ${!d.unlocked?`<div class="tm td" style="font-size:.5rem;margin-top:.2rem">🔒 T${d.id==='observatory'||d.id==='spore_vault'?5:8}</div>`:''}
+    </div>`).join('');
+}
+function buildDistrict(id){
+  const d=G.districts.find(x=>x.id===id);if(!d||d.built||!d.unlocked) return;
+  if(G.seeds<(d.cost.s||0)||G.spores<(d.cost.sp||0)){toast(`Need 🪙${d.cost.s||0} ${d.cost.sp?`& ⚗️${d.cost.sp}`:''}!`,'er');return;}
+  G.seeds-=d.cost.s||0;G.spores-=d.cost.sp||0;d.built=true;
+  if(G.agenda) G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+10);
+  updateHUD();renderDistrictGrid();renderAgenda();checkVic();
+  toast(`🏙 ${d.n} built! ${d.bonus}`,'gd');spawnParticles(10,'#f0d030');
+}
+
+// ── AGENDA & BATTLE ─────────────────────────────────────
+function renderAgenda(){
+  const g=document.getElementById('agrid');if(!g) return;
+  g.innerHTML=Object.entries(AGENDAS).map(([id,a])=>{
+    const prog=G.prog[id]||0;const act=G.agenda===id;
+    return`<div class="ac${act?' akt':''}" onclick="setAgenda('${id}')">
+      <span class="aci">${a.e}</span><div class="acn">${a.n}</div>
+      <p class="acd">${a.d}</p>
+      <div class="tm td" style="font-size:.56rem;margin-bottom:.45rem">Bonus: ${a.bonus}</div>
+      <div class="acp"><div class="acf" style="width:${prog}%;background:${a.col}"></div></div>
+      <div class="acpct">${prog}%${act?' · ACTIVE':''}</div>
+    </div>`;
+  }).join('');
+  const ms=document.getElementById('menu-status');
+  if(ms&&G.agenda) ms.textContent=`Active: ${AGENDAS[G.agenda].e} ${AGENDAS[G.agenda].n} — ${G.prog[G.agenda]||0}%`;
+  renderBattleSetup();
+}
+function setAgenda(id){G.agenda=id;renderAgenda();toast(`📋 Agenda: ${AGENDAS[id].n}`,'ok');}
+
+let selFighter=null;
+function renderBattleSetup(){
+  const a=document.getElementById('bsetup');if(!a) return;
+  if(!G.creatures.length){a.innerHTML='<p class="ts td">Forge creatures in the Cauldron first!</p>';return;}
+  a.innerHTML=`<div class="tm td" style="font-size:.65rem;margin-bottom:.5rem">SELECT YOUR CREATURE:</div>
+  <div class="grid-creatures" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-bottom:.9rem">
+    ${G.creatures.map((c,i)=>`<div class="cc${selFighter===i?' sel':''}" style="--cc-col:${c.col||'var(--green)'};border-color:${selFighter===i?'var(--green)':'var(--b1)'}" onclick="selFighter=${i};renderBattleSetup()">
+      <span class="cem" style="font-size:1.7rem">${c.e}</span>
+      <div class="cn" style="font-size:.75rem">${c.n||c.name}</div>
+      <div class="hpb mt1"><div class="hpf" style="width:${Math.round(c.hp/c.mhp*100)}%"></div></div>
+    </div>`).join('')}
+  </div>
+  ${selFighter!==null?`<div class="tm td" style="font-size:.65rem;margin-bottom:.5rem">CHOOSE RIVAL:</div>
+  <div style="display:flex;flex-direction:column;gap:.4rem">
+    ${RIVALS.map((r,i)=>`<button class="btn btn-gh" style="justify-content:flex-start;text-align:left;font-size:.68rem" onclick="startBattle(${i})">
+      ${r.e} <strong>${r.n}</strong> · ${r.sk.e} ${r.sk.n} <span class="td">· ${r.tag}</span>
+    </button>`).join('')}
+  </div>`:''}`;
+}
+function sendToBattle(idx){selFighter=idx;renderBattleSetup();}
+function startBattle(ri){
+  if(selFighter===null){toast('Select a creature first!','er');return;}
+  const player=JSON.parse(JSON.stringify(G.creatures[selFighter]));
+  const rival=JSON.parse(JSON.stringify(RIVALS[ri]));
+  G.bState={player,rival:rival.sk,ri:rival,turn:0};
+  document.getElementById('bsetup').style.display='none';
+  document.getElementById('bactive').style.display='block';
+  renderBattleField();
+  logB(`⚔️ BATTLE! ${player.n||player.name} vs ${rival.sk.n}!`,'ll');
+  logB(`${rival.e} ${rival.n}: "My ${rival.ag} agenda will prevail."`,'ll');
+}
+function renderBattleField(){
+  const b=G.bState;if(!b) return;
+  const ph=Math.round(b.player.hp/b.player.mhp*100);
+  const rh=Math.round(b.rival.hp/b.rival.mhp*100);
+  document.getElementById('bfield').innerHTML=`
+    <div class="bfs"><span class="bfe">${b.player.e}</span><div class="bfn">${b.player.n||b.player.name}</div>
+    <div class="bfh" style="color:var(--green)">${b.player.hp}/${b.player.mhp}</div>
+    <div class="hpb"><div class="hpf" style="width:${ph}%;background:${ph>60?'var(--green)':ph>30?'var(--gold)':'var(--red)'}"></div></div></div>
+    <div class="vs">VS</div>
+    <div class="bfs"><span class="bfe">${b.rival.e}</span><div class="bfn">${b.rival.n}</div>
+    <div class="bfh" style="color:var(--red)">${b.rival.hp}/${b.rival.mhp}</div>
+    <div class="hpb"><div class="hpf" style="width:${rh}%;background:${rh>60?'var(--red)':rh>30?'var(--gold)':'var(--red)'}"></div></div></div>`;
+}
+function logB(msg,cls){
+  const l=document.getElementById('blog');if(!l) return;
+  l.innerHTML+=`<div class="${cls||''}">${msg}</div>`;l.scrollTop=l.scrollHeight;
+}
+function bAtk(){
+  const b=G.bState;if(!b) return;b.turn++;
+  const pa=(b.player.stats?.atk||5)+Math.floor(Math.random()*8)+1;
+  const rd=(b.rival.stats?.def||3)+Math.floor(Math.random()*3);
+  const dmg=Math.max(1,pa-rd);b.rival.hp=Math.max(0,b.rival.hp-dmg);
+  logB(`🗡 ${b.player.n||b.player.name} deals ${dmg} damage! (${b.rival.hp} HP)`,'la');
+  if(!b.rival.hp){endBattle(true);return;}
+  const ra=(b.rival.stats?.atk||6)+Math.floor(Math.random()*8)+1;
+  const pd=(b.player.stats?.def||3)+Math.floor(Math.random()*3);
+  const rdmg=Math.max(1,ra-pd);b.player.hp=Math.max(0,b.player.hp-rdmg);
+  logB(`💥 ${b.rival.n} hits for ${rdmg}! (${b.player.hp} HP)`,'ld');
+  if(b.player.stats?.heal>0&&b.turn%3===0){
+    const h=Math.ceil(b.player.stats.heal/2);b.player.hp=Math.min(b.player.mhp,b.player.hp+h);
+    logB(`💚 ${b.player.n||b.player.name} regenerates ${h} HP`,'lh');
+  }
+  if(!b.player.hp){endBattle(false);return;}
+  renderBattleField();
+}
+function bSpc(){
+  const b=G.bState;if(!b) return;
+  const ab=b.player.ab?.[0]||'Special';
+  const dmg=Math.floor((b.player.stats?.int||5)*1.8)+Math.floor(Math.random()*10)+3;
+  b.rival.hp=Math.max(0,b.rival.hp-dmg);
+  logB(`✨ ${b.player.n||b.player.name} uses ${ab}! ${dmg} dmg!`,'ls');
+  if(!b.rival.hp){endBattle(true);return;}
+  const rdmg=Math.floor((b.rival.stats?.atk||8)*1.2)+Math.floor(Math.random()*5);
+  b.player.hp=Math.max(0,b.player.hp-rdmg);
+  logB(`⚡ ${b.rival.n} retaliates! ${rdmg} dmg!`,'ld');
+  if(!b.player.hp){endBattle(false);return;}
+  renderBattleField();
+}
+function bFlee(){G.bState=null;logB('🏃 Fled the battle!','ll');resetBattle();}
+function endBattle(won){
+  const b=G.bState;if(!b) return;
+  if(won){
+    logB(`🏆 VICTORY! ${b.player.n||b.player.name} defeats ${b.rival.n}!`,'lw');
+    const xp=50+b.rival.stats.atk*2;G.creatures[selFighter].xp=(G.creatures[selFighter].xp||0)+xp;
+    G.seeds+=35;
+    const sk=G.creatures[selFighter];
+    if(sk.xp>=sk.level*100){sk.level++;sk.xp=0;sk.mhp=Math.floor(sk.mhp*1.15);
+      Object.keys(sk.stats).forEach(k=>sk.stats[k]=Math.floor((sk.stats[k]||0)*1.1));
+      logB(`⬆️ ${sk.n||sk.name} reached Level ${sk.level}!`,'ls');}
+    sk.hp=Math.min(sk.mhp,b.player.hp);
+    const drops=['rose','sunflower','mint','orchid','lotus','ginger','fern','echinacea','lavender'];
+    const drop=drops[Math.floor(Math.random()*drops.length)];
+    G.inv[drop]=(G.inv[drop]||0)+1;G.disc.add(drop);
+    logB(`🌿 Found ${B[drop]?.e||'🌿'} ${B[drop]?.n||drop}! +${xp}XP +35 seeds`,'lh');
+    if(G.agenda) G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+15);
+    if(G.agenda==='war') G.prog.war=Math.min(100,(G.prog.war||0)+20);
+    G.battles.push({won:true,rival:b.ri.n,sk:b.player.n||b.player.name});
+    spawnParticles(15,'#58d838');
+  } else {
+    logB(`💀 ${b.player.n||b.player.name} defeated by ${b.rival.n}...`,'ll');
+    G.creatures[selFighter].hp=Math.max(1,Math.floor(G.creatures[selFighter].mhp*.1));
+    G.battles.push({won:false,rival:b.ri.n,sk:b.player.n||b.player.name});
+    toast('Your creature was defeated!','er');
+  }
+  G.bState=null;
+  document.querySelector('.bbtns').innerHTML=`<button class="btn btn-p" style="grid-column:1/-1" onclick="resetBattle()">← Back</button>`;
+  updateHUD();renderAgenda();checkVic();renderBattleHistory();
+}
+function resetBattle(){
+  selFighter=null;G.bState=null;
+  document.getElementById('bsetup').style.display='block';
+  document.getElementById('bactive').style.display='none';
+  document.querySelector('.bbtns').innerHTML=`<button class="btn btn-r" onclick="bAtk()">⚔️ Attack</button><button class="btn btn-g" onclick="bSpc()">✨ Special</button><button class="btn btn-gh" onclick="bFlee()">🏃 Flee</button>`;
+  document.getElementById('blog').innerHTML='';
+  renderBattleSetup();
+}
+function renderBattleHistory(){
+  const e=document.getElementById('bhist');if(!e) return;
+  if(!G.battles.length){e.textContent='No battles yet.';return;}
+  e.innerHTML=G.battles.slice(-10).reverse().map(b=>`<div style="margin-bottom:.25rem;color:${b.won?'var(--green)':'var(--red)'}">${b.won?'✓':'✗'} ${b.sk} vs ${b.rival}</div>`).join('');
+}
+
+// ── TURN ENGINE ─────────────────────────────────────────
+function endTurn(){
+  const ov=document.getElementById('tov');const tn=document.getElementById('tnum');
+  ov.classList.add('on');G.turn++;tn.textContent='TURN '+G.turn;
+  setTimeout(()=>{ov.classList.remove('on');processTurn();},1100);
+}
+function processTurn(){
+  G.energy=Math.min(G.maxE,G.energy+4);
+  G.spores=G.districts.find(d=>d.id==='spore_vault'&&d.built)?
+    Math.min(G.spores+3,15):Math.min(G.spores+1,12);
+  if(G.agenda==='nature') Object.keys(G.biomes).forEach(k=>G.biomes[k]=Math.min(100,G.biomes[k]+2));
+  G.crisis=Math.min(96,G.crisis+1.2);
+  if(G.districts.find(d=>d.id==='mycelium_net'&&d.built)) G.creatures.forEach(c=>c.hp=Math.min(c.mhp,c.hp+2));
+  // Random events
+  if(Math.random()<.28){
+    const events=[
+      ()=>{const k=Object.keys(G.biomes)[Math.floor(Math.random()*8)];G.biomes[k]=Math.max(5,G.biomes[k]-10);toast(`⚠️ ${k} biome deteriorating!`,'er');},
+      ()=>{G.seeds+=25;toast('💰 Trade caravan brings 25 seeds!','gd');},
+      ()=>{const gp=GLOBALS[Math.floor(Math.random()*GLOBALS.length)];G.inv[gp]=(G.inv[gp]||0)+2;G.disc.add(gp);toast(`🌿 ${B[gp]?.e||'🌿'} ${B[gp]?.n||gp} sprouted at your base!`,'ok');},
+      ()=>{G.spores=Math.min(G.spores+2,15);toast('⚗️ Spore surge! +2 Charges','in');},
+      ()=>{if(G.creatures.length>0){const ci=Math.floor(Math.random()*G.creatures.length);const heal=Math.floor(G.creatures[ci].mhp*.2);G.creatures[ci].hp=Math.min(G.creatures[ci].mhp,G.creatures[ci].hp+heal);toast(`💚 ${G.creatures[ci].n||G.creatures[ci].name} healed by ${heal}!`,'ok');}},
+    ];
+    events[Math.floor(Math.random()*events.length)]();
+  }
+  updateHUD();renderWorlds();renderAgenda();renderPlants();renderPRow();renderBattleHistory();renderCreatures();renderCauldron();
+  renderDistrictGrid();
+  document.getElementById('ht').textContent='T'+G.turn;
+  checkVic();
+  const hudTurn=document.getElementById('ht');if(hudTurn) hudTurn.textContent='T'+G.turn;
+}
+
+// ── VICTORY CHECK ────────────────────────────────────────
+function checkVic(){
+  if(G.prog.science>=80&&!G.victories.includes('science')){G.victories.push('science');showVic('🔬 SCIENCE VICTORY','Humanity survives through knowledge. Earth\'s ailments cured.','var(--blue)');}
+  if(Object.values(G.biomes).every(v=>v>=70)&&!G.victories.includes('nature')){G.victories.push('nature');showVic('🌿 NATURE VICTORY','All biomes restored. Earth breathes again. The green returns.','var(--green)');}
+  const wins=G.battles.filter(b=>b.won).length;
+  if(wins>=5&&!G.victories.includes('war')){G.victories.push('war');showVic('⚔️ WAR VICTORY','All rival Defenders defeated. Earth protected by force.','var(--red)');}
+  const seeded=G.planets.filter(p=>p.seeded).length;
+  if(seeded>=3&&!G.victories.includes('exodus')){G.victories.push('exodus');showVic('🚀 EXODUS VICTORY','Three worlds seeded. Life is immortal across the stars.','var(--teal)');}
+  if(G.crisis>=96&&!G.victories.length){toast('💀 EARTH HAS FALLEN. Start anew.','er');}
+}
+function showVic(title,sub,col){
+  const v=document.getElementById('vov');
+  v.innerHTML=`<div class="vtitle" style="color:${col}">${title}</div>
+    <p class="vsub">${sub}</p>
+    <p style="font-size:.8rem;color:var(--t3);margin-bottom:1.5rem">Turn ${G.turn} · Crisis: ${Math.round(G.crisis)}%</p>
+    <button class="btn btn-p btn-lg" onclick="document.getElementById('vov').classList.remove('on')">Continue Playing</button>`;
+  v.classList.add('on');spawnParticles(40,col);
+}
+
+// ── HUD UPDATE ───────────────────────────────────────────
+function updateHUD(){
+  const tp=Object.values(G.inv).reduce((a,b)=>a+b,0);
+  document.getElementById('r-plants').textContent=tp;
+  document.getElementById('r-creat').textContent=G.creatures.length;
+  document.getElementById('r-energy').textContent=G.energy;
+  document.getElementById('r-seeds').textContent=G.seeds;
+  document.getElementById('r-spores').textContent=G.spores;
+  const pct=Math.round(G.crisis);
+  document.getElementById('cr-pct').textContent=pct+'%';
+  document.getElementById('cr-bar').style.width=pct+'%';
+}
+function updateNavBadges(){
+  const nb=document.getElementById('nbp');
+  if(nb) nb.style.display=G.newPlants.size>0?'flex':'none';
+}
+
+// ── TABS ─────────────────────────────────────────────────
+function sTab(name){
+  ['map','plants','cauldron','creatures','worlds','agenda'].forEach(t=>{
+    document.getElementById('tp-'+t)?.classList.remove('on');
+    document.getElementById('nb-'+t)?.classList.remove('on');
+  });
+  document.getElementById('tp-'+name)?.classList.add('on');
+  document.getElementById('nb-'+name)?.classList.add('on');
+  if(name==='plants'){renderPlants();renderPRow();G.newPlants.clear();updateNavBadges();}
+  if(name==='creatures') renderCreatures();
+  if(name==='worlds') renderWorlds();
+  if(name==='agenda') renderAgenda();
+  if(name==='cauldron') renderCauldron();
+}
+
+// ── CODEX ─────────────────────────────────────────────────
+let cxF='all';
+function renderCodex(f){
+  f=f||cxF;cxF=f;
+  const g=document.getElementById('cxgrid');if(!g) return;
+  let plants=Object.values(B);
+  if(f!=='all') plants=plants.filter(p=>p.type===f);
+  const q=(document.querySelector('#m-codex .srch input')?.value||'').toLowerCase();
+  if(q) plants=plants.filter(p=>p.n.toLowerCase().includes(q)||(p.sci||'').toLowerCase().includes(q));
+  g.innerHTML=plants.map(p=>`<div class="pc" style="cursor:default">
+    <div class="prr" style="background:${RC[p.r]||RC[1]}"></div>
+    <span class="pe">${p.e}</span><div class="pn">${p.n}</div>
+    <div class="psci">${p.sci||''}</div>
+    <div class="pt">${p.type} · R${p.r}</div>
+    <div class="pt" style="font-size:.42rem;margin-top:.1rem">${(p.con||'').replace(/_/g,' ')}</div>
+    ${p.type==='mushroom'?'<div class="pmush">RARE</div>':''}
+  </div>`).join('');
+  // Stats
+  const cs=document.getElementById('cx-stats');
+  if(cs){
+    const byType={};plants.forEach(p=>{byType[p.type]=(byType[p.type]||0)+1;});
+    cs.innerHTML=`<div class="cxs">Total <b>${Object.keys(B).length}</b></div>`+
+      Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([t,c])=>`<div class="cxs">${t} <b>${c}</b></div>`).join('');
+  }
+}
+function fCX(f,btn){document.querySelectorAll('#cxf .fb').forEach(b=>b.classList.remove('on'));btn?.classList.add('on');renderCodex(f);}
+function sCX(q){renderCodex(cxF);}
+
+// ── SYNERGY INFO ─────────────────────────────────────────
+function renderSynergy(){
+  const el=document.getElementById('syn-content');if(!el) return;
+  const TS=window.TYPE_SYNERGY;
+  el.innerHTML=Object.entries(TS).map(([key,s])=>`
+    <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--rad);padding:.75rem;margin-bottom:.5rem">
+      <div style="font-family:var(--fd);font-size:.78rem;color:var(--green);margin-bottom:.25rem">${key.replace('+',' + ')}</div>
+      <div style="font-family:var(--fm);font-size:.6rem;color:var(--amber);margin-bottom:.2rem">×${s.mult} to <strong>${s.bonus}</strong></div>
+      <div style="font-size:.72rem;color:var(--t2);font-style:italic">${s.effect}</div>
+    </div>`).join('');
+}
+
+// ── FUSION HINTS ─────────────────────────────────────────
+function renderHints(){
+  const el=document.getElementById('hints-list');if(!el) return;
+  const hints=[
+    {ings:['rose','shiitake','sunflower'],note:'Apex: Dawnguard Bloom'},
+    {ings:['lotus','reishi','orchid'],note:'Apex: Eternal Lotus'},
+    {ings:['cordyceps','lions_mane','reishi'],note:'Apex: Mycelium Oracle (Legendary)'},
+    {ings:['black_lotus','truffle_black','mycena_prime'],note:'Apex: Void Bloom (Primordial)'},
+    {ings:['bleeding_tooth','death_cap','destroying_angel'],note:'Warrior: Death Triumvirate (Tier 5)'},
+    {ings:['chaga_siberian','reishi','lions_mane'],note:'Healer: Immortal Healer (Tier 5)'},
+    {ings:['void_truffle','earth_heart','mycena_prime'],note:'Apex: Genesis Entity (Tier 6 Mythic)'},
+    {ings:['salvia','psilocybe_cubensis','lions_mane'],note:'Researcher: Transcendent Oracle'},
+    {ings:['ayahuasca','psilocybe_cubensis','cordyceps'],note:'Apex: Cosmic Wanderer'},
+    {ings:['dragon_blood_tree','welwitschia','chaga'],note:'Defender: Eternal Bastion (Tier 5)'},
+    {ings:['arctic_poppy','edelweiss','purple_saxifrage'],note:'Explorer: Polar Pioneer'},
+    {ings:['cordyceps','caterpillar_fungus','mint'],note:'Explorer: Speed God (Tier 4)'},
+    {ings:['aloe+moss+water_lily'],note:'Healer: Soothing Sprite (starter)'},
+    {ings:['bamboo','mint','dandelion'],note:'Explorer: Swift Scout (starter)'},
+    {ings:['kudzu','nightshade','poison_ivy'],note:'Warrior: Toxin Striker'},
+    {ings:['oak','sequoia','baobab'],note:'Defender: Ancient Fortress (Tier 3)'},
+  ];
+  el.innerHTML=hints.map(h=>{
+    const owned=h.ings.every(id=>G.disc.has(id));
+    return`<div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--rad);padding:.7rem;margin-bottom:.45rem">
+      <div style="display:flex;gap:.3rem;margin-bottom:.3rem;flex-wrap:wrap">
+        ${h.ings.map(id=>`<span style="font-size:.95rem">${G.disc.has(id)?(B[id]?.e||'🌿'):'❓'}</span>`).join('<span style="color:var(--t3);font-size:.8rem">+</span>')}
+      </div>
+      <div class="tm" style="font-size:.6rem;color:${owned?'var(--green)':'var(--t3)'}">
+        ${h.note}${owned?' <span style="color:var(--green)">✓ You have these!</span>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODALS ────────────────────────────────────────────────
+function openM(id){
+  if(id==='m-codex') renderCodex();
+  if(id==='m-synergy') renderSynergy();
+  if(id==='m-hints') renderHints();
+  document.getElementById(id)?.classList.add('on');
+}
+function closeM(id){document.getElementById(id)?.classList.remove('on');}
+document.querySelectorAll('.mb').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on');}));
+
+// ── TOAST ─────────────────────────────────────────────────
+function toast(msg,type='ok'){
+  const w=document.getElementById('toasts');
+  const el=document.createElement('div');el.className='toast '+type;el.textContent=msg;
+  w.appendChild(el);setTimeout(()=>el.remove(),3200);
+  while(w.children.length>4) w.firstChild.remove();
+}
+
+// ── PARTICLES ─────────────────────────────────────────────
+function spawnParticles(n,col){
+  for(let i=0;i<n;i++){
+    const el=document.createElement('div');
+    el.className='particle';
+    el.style.cssText=`width:8px;height:8px;background:${col};left:${40+Math.random()*20}%;top:${40+Math.random()*20}%;--tx:${(Math.random()-.5)*200}px;--ty:${(Math.random()-.5)*200}px;animation-delay:${Math.random()*.3}s`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),700);
+  }
+}
+
+// ── STARS ─────────────────────────────────────────────────
+function buildStars(){
+  const w=document.getElementById('stars');
+  for(let i=0;i<90;i++){
+    const s=document.createElement('div');s.className='star';
+    const big=Math.random()<.15;
+    s.style.cssText=`--sz:${big?2:1}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(2+Math.random()*5).toFixed(1)}s;--dl:${(-Math.random()*5).toFixed(1)}s;--pk:${(.3+Math.random()*.6).toFixed(2)}`;
+    w.appendChild(s);
+  }
+}
+
+// ── ENERGY REGEN ──────────────────────────────────────────
+setInterval(()=>{
+  if(document.getElementById('s-game').classList.contains('on')&&G.energy<G.maxE){G.energy++;updateHUD();}
+},15000);
+
+// ── INIT ──────────────────────────────────────────────────
+function startGame(){
+  document.getElementById('s-title').classList.remove('on');
+  document.getElementById('s-game').classList.add('on');
+  buildHex();initMap();updateHUD();renderPlants();renderPRow();renderCodex();
+  // Mark starting hex explored
+  const start=G.hexGrid.find(h=>h.biome==='city')||G.hexGrid[7*GCOLS+6];
+  if(start){start.explored=true;}
+  drawMap();
+  toast('🌱 Earth needs you. The mycelium web stirs.','ok');
+  setTimeout(()=>toast('💡 Tap map tiles to explore. Forge creatures at the Cauldron.','in'),1600);
+  setTimeout(()=>toast(`🌿 ${Object.keys(B).length} plant species await discovery.`,'in'),3200);
+}
+buildStars();renderCodex();
+</script>
+</body>
+</html>
