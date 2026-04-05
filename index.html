@@ -521,7 +521,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--parchment
 //  Third-person top-down survival with creepy hand-drawn aesthetic
 // ╚══════════════════════════════════════════════════════════════════╝
 
-const B = window.BOTANICA || window.P;
+const _rawB = window.BOTANICA || {};
+// Normalize plant properties: botanica.js uses .name, old code used .n
+// Create accessor that supports both
+const B = new Proxy(_rawB, {
+  get(target, prop) {
+    const v = target[prop];
+    if (v && typeof v === 'object' && v.name && !v.n) {
+      v.n = v.name; // alias .n to .name
+    }
+    return v;
+  }
+});
+// Pre-populate .n alias on all plants
+for (const [id, p] of Object.entries(_rawB)) {
+  if (p && p.name) p.n = p.name;
+}
 const RN = window.RARITY_NAMES;
 const RC = window.RARITY_COLORS;
 
@@ -2330,7 +2345,10 @@ function startGame() {
 }
 
 // Initialize codex on title screen
-renderCodex();
+try { renderCodex(); } catch(e) { console.error('Codex init error:', e); }
+
+// Debug: confirm script loaded
+console.log('VERDANT engine loaded. Plants:', Object.keys(B).length);
 </script>
 </body>
 </html>
