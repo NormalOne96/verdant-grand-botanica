@@ -132,9 +132,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--parchment
 @keyframes toastIn{from{transform:translateY(-15px);opacity:0}to{transform:none;opacity:1}}
 .toast.ok{border-color:var(--venom);color:var(--venom2)}.toast.er{border-color:var(--blood);color:var(--blood2)}.toast.gd{border-color:var(--gold);color:var(--gold2)}.toast.info{border-color:var(--ice);color:var(--ice)}.toast.mu{border-color:var(--mystic);color:var(--mystic2)}
 .lore{background:rgba(200,168,64,.04);border-left:3px solid var(--ink3);padding:.4rem .6rem;font-style:italic;color:var(--parchment2);font-size:.68rem;line-height:1.7;margin-bottom:.5rem}
-.touch-joystick{position:fixed;bottom:calc(70px + var(--safe-b));left:15px;z-index:20;display:none;width:90px;height:90px;border-radius:50%;border:2px solid rgba(212,196,160,.2);background:rgba(10,8,6,.4);touch-action:none}
-.touch-joystick .joy-knob{position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(212,196,160,.3);border:1px solid rgba(212,196,160,.4);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-@media(hover:none)and(pointer:coarse){.touch-joystick{display:block}.touch-actions{display:flex!important}}
+.touch-joystick{display:none!important}
+@media(hover:none)and(pointer:coarse){.touch-actions{display:flex!important}}
 .touch-actions{position:fixed;bottom:calc(70px + var(--safe-b));right:15px;z-index:20;display:none;flex-direction:column;gap:5px}
 .touch-btn{width:44px;height:44px;border-radius:50%;border:2px solid var(--ink3);background:rgba(10,8,6,.6);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--parchment);cursor:pointer}
 .touch-btn:active{background:rgba(42,32,24,.8);border-color:var(--gold)}
@@ -435,6 +434,7 @@ function update(dt){
   let mx=0,my=0;
   if(G.keys.ArrowUp||G.keys.KeyW||G.keys.w)my=-1;if(G.keys.ArrowDown||G.keys.KeyS||G.keys.s)my=1;
   if(G.keys.ArrowLeft||G.keys.KeyA||G.keys.a)mx=-1;if(G.keys.ArrowRight||G.keys.KeyD||G.keys.d)mx=1;
+  updateTapMove();
   if(G.joyX||G.joyY){mx=G.joyX;my=G.joyY}
   // Smooth acceleration/deceleration
   if(!G.vx)G.vx=0;if(!G.vy)G.vy=0;
@@ -567,6 +567,8 @@ function render(){
   drawables.push({y:G.py,draw:drawPlayer});
   drawables.sort((a,b)=>a.y-b.y);
   for(let i=0;i<drawables.length;i++)drawables[i].draw();
+  // Tap target indicator
+  drawTapTarget();
   // Floating pickup text
   ctx.font='bold 10px "Space Mono"';ctx.textAlign='center';
   for(const ft of floatingTexts){ctx.globalAlpha=ft.t/.8;ctx.fillStyle=ft.color;ctx.fillText(ft.text,ft.x,ft.y);ctx.globalAlpha=1}
@@ -669,7 +671,7 @@ function renderMinimap(){
 // ══════════════════════════════════════════════════════════
 //  INPUT
 // ════════════════════════���═════════════════════════════════
-document.addEventListener('keydown',e=>{G.keys[e.code]=true;G.keys[e.key]=true;
+document.addEventListener('keydown',e=>{G.keys[e.code]=true;G.keys[e.key]=true;tapTarget=null;
   if(e.code==='KeyE'||e.key==='e')interactWorld();
   if(e.code==='Tab'||e.key==='Tab'){e.preventDefault();toggleCraft()}
   if(e.code==='KeyI'||e.key==='i'){openModal('inv-modal');renderInv()}
@@ -682,47 +684,66 @@ document.addEventListener('keyup',e=>{G.keys[e.code]=false;G.keys[e.key]=false})
 // 16. Zoom
 document.addEventListener('wheel',e=>{if(!document.getElementById('game-screen').classList.contains('active'))return;e.preventDefault();G.zoom=Math.max(.5,Math.min(2.5,G.zoom-e.deltaY*.001))},{passive:false});
 // Joystick
-// Joystick — initialized lazily after game starts
-function initJoystick(){
-  const j=document.getElementById('joystick'),k=document.getElementById('joy-knob');
-  if(!j||!k)return;let on=false;
-  function h(e){
-    if(!e.touches||!e.touches.length)return;
-    const t=e.touches[0],r=j.getBoundingClientRect();
-    if(r.width===0)return; // element hidden
-    const cx=r.left+r.width/2,cy=r.top+r.height/2;
-    let dx=(t.clientX-cx)/(r.width/2),dy=(t.clientY-cy)/(r.height/2);
-    const l=Math.sqrt(dx*dx+dy*dy);if(l>1){dx/=l;dy/=l}
-    G.joyX=Math.abs(dx)>.12?dx:0;G.joyY=Math.abs(dy)>.12?dy:0;
-    k.style.transform=`translate(calc(-50% + ${dx*22}px),calc(-50% + ${dy*22}px))`;
-  }
-  j.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();on=true;h(e);initAudio()},{passive:false});
-  j.addEventListener('touchmove',e=>{if(on){e.preventDefault();e.stopPropagation();h(e)}},{passive:false});
-  j.addEventListener('touchend',e=>{e.preventDefault();on=false;G.joyX=0;G.joyY=0;k.style.transform='translate(-50%,-50%)'},{passive:false});
+// TAP-TO-MOVE: tap anywhere on screen, character walks to that world position
+// Also draws a target indicator so you can see where you're going
+let tapTarget=null; // {wx, wy} in world coords — persists until player arrives
 
-  // Fallback: tap anywhere on canvas to move toward tap point
+function initTouchControls(){
   const cv=document.getElementById('gameCanvas');
-  let tapMove=null;
+
   cv.addEventListener('touchstart',e=>{
     if(e.touches.length!==1)return;
     const t=e.touches[0];
-    // Ignore if tapping on UI elements (bottom 80px or top 70px or sides)
-    if(t.clientY>H-80||t.clientY<70||t.clientX<120||t.clientX>W-60)return;
+    // Ignore taps on HUD areas: top 60px, bottom 60px
+    if(t.clientY<60||t.clientY>H-60)return;
+    e.preventDefault();
     initAudio();
-    // Convert screen tap to world position
-    const wx=t.clientX/G.zoom+G.camX,wy=t.clientY/G.zoom+G.camY;
-    tapMove={x:wx,y:wy};
-  },{passive:true});
-  cv.addEventListener('touchend',()=>{tapMove=null},{passive:true});
+    // Convert screen position to world position
+    const wx=t.clientX/G.zoom+G.camX;
+    const wy=t.clientY/G.zoom+G.camY;
+    tapTarget={x:wx,y:wy};
+  },{passive:false});
 
-  // Process tap-to-move in update
-  const origUpdate=window._origUpdateTap;
-  setInterval(()=>{
-    if(tapMove&&!G.joyX&&!G.joyY){
-      const dx=tapMove.x-G.px,dy=tapMove.y-G.py,d=Math.sqrt(dx*dx+dy*dy);
-      if(d>20){G.joyX=dx/d;G.joyY=dy/d}else{tapMove=null;G.joyX=0;G.joyY=0}
-    }
-  },50);
+  // Drag to update target position (lets you steer by dragging)
+  cv.addEventListener('touchmove',e=>{
+    if(!tapTarget||e.touches.length!==1)return;
+    const t=e.touches[0];
+    if(t.clientY<60||t.clientY>H-60)return;
+    e.preventDefault();
+    tapTarget.x=t.clientX/G.zoom+G.camX;
+    tapTarget.y=t.clientY/G.zoom+G.camY;
+  },{passive:false});
+
+  // Double-tap to interact with nearest object
+  let lastTap=0;
+  cv.addEventListener('touchend',e=>{
+    const now=Date.now();
+    if(now-lastTap<300)interactWorld();
+    lastTap=now;
+    // DON'T clear tapTarget here — character keeps walking to destination
+  },{passive:true});
+}
+
+// Called every frame in update() to drive movement from tap target
+function updateTapMove(){
+  if(!tapTarget)return;
+  const dx=tapTarget.x-G.px,dy=tapTarget.y-G.py;
+  const d=Math.sqrt(dx*dx+dy*dy);
+  if(d<25){
+    // Arrived at destination
+    tapTarget=null;G.joyX=0;G.joyY=0;
+  }else{
+    G.joyX=dx/d;G.joyY=dy/d;
+  }
+}
+
+// Draw tap target indicator in world space (called from render)
+function drawTapTarget(){
+  if(!tapTarget)return;
+  const pulse=Math.sin(animFrame*.1)*.3+.7;
+  ctx.strokeStyle=`rgba(200,168,64,${pulse*.5})`;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(tapTarget.x,tapTarget.y,8+pulse*4,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(tapTarget.x,tapTarget.y,2,0,Math.PI*2);ctx.fillStyle=`rgba(200,168,64,${pulse})`;ctx.fill();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -967,12 +988,13 @@ function getShareURL(){return window.location.origin+window.location.pathname+'?
 function startGame(){
   document.getElementById('title-screen').classList.add('hidden');document.getElementById('game-screen').classList.add('active');
   initAudio();initCanvas();generateWorld();renderHotbar();updateRes();
-  // Init joystick AFTER game screen is visible (so getBoundingClientRect works)
-  setTimeout(initJoystick,100);
+  // Init tap-to-move controls after game screen is visible
+  setTimeout(initTouchControls,100);
   // Try load
   const save=localStorage.getItem('verdant_save');if(save){try{const s=JSON.parse(save);if(s.worldSeed===G.worldSeed){Object.assign(G,s);G.disc=new Set(s.disc||[]);G.achieved=new Set(s.achieved||[]);G.exploredTiles=new Set(s.exploredTiles||[]);G.corruptionTiles=new Set(s.corruptionTiles||[]);G.keys={};G.companions=s.companions||[];updateRes();renderHotbar();toast('Save loaded!','ok')}}catch(e){}}
   lastTime=performance.now();requestAnimationFrame(gameLoop);startAmbient();
-  setTimeout(()=>toast('WASD move · E interact · TAB craft · Scroll zoom','info'),500);
+  const isMobile='ontouchstart'in window;
+  setTimeout(()=>toast(isMobile?'Tap to move · Double-tap to interact · Use buttons for menus':'WASD move · E interact · TAB craft · Scroll zoom','info'),500);
   setTimeout(()=>toast('The mycelium web stirs beneath your feet...','ok'),2000);
 }
 try{renderCodex()}catch(e){console.log('Codex init:',e)}
