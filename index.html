@@ -474,9 +474,16 @@ function update(dt){
     // Auto-harvest nearby
     for(const o of G.worldObjects){if(o.type==='plant'&&!o.harvested&&o.interactable){const dx=c.x-o.x,dy=c.y-o.y;if(Math.sqrt(dx*dx+dy*dy)<40){harvestPlant(o,true);break}}}
   });
-  // Nearest interactable
-  G.nearObject=null;let nd=65;
-  for(const o of G.worldObjects){if(!o.interactable||o.harvested)continue;const dx=G.px-o.x,dy=G.py-o.y,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;G.nearObject=o}}
+  // AUTO-PICKUP: walk over plants to harvest them automatically
+  for(const o of G.worldObjects){
+    if(o.type==='plant'&&!o.harvested&&o.interactable){
+      const dx=G.px-o.x,dy=G.py-o.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<35){harvestPlant(o);break}
+    }
+  }
+  // Nearest interactable (for structures, NPCs — things that need E press)
+  G.nearObject=null;let nd=90;
+  for(const o of G.worldObjects){if(!o.interactable||o.harvested)continue;if(o.type==='plant')continue;const dx=G.px-o.x,dy=G.py-o.y,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;G.nearObject=o}}
   // Check NPCs too
   for(const npc of G.npcs){const dx=G.px-npc.x,dy=G.py-npc.y,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;G.nearObject={type:'npc',npc,x:npc.x,y:npc.y,name:npc.n,emoji:npc.e,interactable:true,interact:'npc'}}}
   const popup=document.getElementById('interact-popup');
