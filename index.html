@@ -682,12 +682,48 @@ document.addEventListener('keyup',e=>{G.keys[e.code]=false;G.keys[e.key]=false})
 // 16. Zoom
 document.addEventListener('wheel',e=>{if(!document.getElementById('game-screen').classList.contains('active'))return;e.preventDefault();G.zoom=Math.max(.5,Math.min(2.5,G.zoom-e.deltaY*.001))},{passive:false});
 // Joystick
-(function(){const j=document.getElementById('joystick'),k=document.getElementById('joy-knob');let on=false;
-  function h(e){const t=e.touches[0],r=j.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=(t.clientX-cx)/(r.width/2),dy=(t.clientY-cy)/(r.height/2);const l=Math.sqrt(dx*dx+dy*dy);if(l>1){dx/=l;dy/=l}G.joyX=Math.abs(dx)>.15?dx:0;G.joyY=Math.abs(dy)>.15?dy:0;k.style.transform=`translate(calc(-50% + ${dx*22}px),calc(-50% + ${dy*22}px))`}
-  j.addEventListener('touchstart',e=>{e.preventDefault();on=true;h(e);initAudio()},{passive:false});
-  j.addEventListener('touchmove',e=>{if(on){e.preventDefault();h(e)}},{passive:false});
-  j.addEventListener('touchend',()=>{on=false;G.joyX=0;G.joyY=0;k.style.transform='translate(-50%,-50%)'});
-})();
+// Joystick — initialized lazily after game starts
+function initJoystick(){
+  const j=document.getElementById('joystick'),k=document.getElementById('joy-knob');
+  if(!j||!k)return;let on=false;
+  function h(e){
+    if(!e.touches||!e.touches.length)return;
+    const t=e.touches[0],r=j.getBoundingClientRect();
+    if(r.width===0)return; // element hidden
+    const cx=r.left+r.width/2,cy=r.top+r.height/2;
+    let dx=(t.clientX-cx)/(r.width/2),dy=(t.clientY-cy)/(r.height/2);
+    const l=Math.sqrt(dx*dx+dy*dy);if(l>1){dx/=l;dy/=l}
+    G.joyX=Math.abs(dx)>.12?dx:0;G.joyY=Math.abs(dy)>.12?dy:0;
+    k.style.transform=`translate(calc(-50% + ${dx*22}px),calc(-50% + ${dy*22}px))`;
+  }
+  j.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();on=true;h(e);initAudio()},{passive:false});
+  j.addEventListener('touchmove',e=>{if(on){e.preventDefault();e.stopPropagation();h(e)}},{passive:false});
+  j.addEventListener('touchend',e=>{e.preventDefault();on=false;G.joyX=0;G.joyY=0;k.style.transform='translate(-50%,-50%)'},{passive:false});
+
+  // Fallback: tap anywhere on canvas to move toward tap point
+  const cv=document.getElementById('gameCanvas');
+  let tapMove=null;
+  cv.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1)return;
+    const t=e.touches[0];
+    // Ignore if tapping on UI elements (bottom 80px or top 70px or sides)
+    if(t.clientY>H-80||t.clientY<70||t.clientX<120||t.clientX>W-60)return;
+    initAudio();
+    // Convert screen tap to world position
+    const wx=t.clientX/G.zoom+G.camX,wy=t.clientY/G.zoom+G.camY;
+    tapMove={x:wx,y:wy};
+  },{passive:true});
+  cv.addEventListener('touchend',()=>{tapMove=null},{passive:true});
+
+  // Process tap-to-move in update
+  const origUpdate=window._origUpdateTap;
+  setInterval(()=>{
+    if(tapMove&&!G.joyX&&!G.joyY){
+      const dx=tapMove.x-G.px,dy=tapMove.y-G.py,d=Math.sqrt(dx*dx+dy*dy);
+      if(d>20){G.joyX=dx/d;G.joyY=dy/d}else{tapMove=null;G.joyX=0;G.joyY=0}
+    }
+  },50);
+}
 
 // ══════════════════════════════════════════════════════════
 //  INTERACTION
@@ -931,6 +967,8 @@ function getShareURL(){return window.location.origin+window.location.pathname+'?
 function startGame(){
   document.getElementById('title-screen').classList.add('hidden');document.getElementById('game-screen').classList.add('active');
   initAudio();initCanvas();generateWorld();renderHotbar();updateRes();
+  // Init joystick AFTER game screen is visible (so getBoundingClientRect works)
+  setTimeout(initJoystick,100);
   // Try load
   const save=localStorage.getItem('verdant_save');if(save){try{const s=JSON.parse(save);if(s.worldSeed===G.worldSeed){Object.assign(G,s);G.disc=new Set(s.disc||[]);G.achieved=new Set(s.achieved||[]);G.exploredTiles=new Set(s.exploredTiles||[]);G.corruptionTiles=new Set(s.corruptionTiles||[]);G.keys={};G.companions=s.companions||[];updateRes();renderHotbar();toast('Save loaded!','ok')}}catch(e){}}
   lastTime=performance.now();requestAnimationFrame(gameLoop);startAmbient();
