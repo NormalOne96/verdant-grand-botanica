@@ -686,64 +686,117 @@ document.addEventListener('wheel',e=>{if(!document.getElementById('game-screen')
 // Joystick
 // TAP-TO-MOVE: tap anywhere on screen, character walks to that world position
 // Also draws a target indicator so you can see where you're going
-let tapTarget=null; // {wx, wy} in world coords — persists until player arrives
+// TAP-TO-MOVE + TAP-TO-INTERACT
+// tap empty ground = walk there, tap object = walk to it then interact
+let tapTarget=null; // {x,y, obj?} — world coords + optional target object
+let isDragging=false;
 
 function initTouchControls(){
   const cv=document.getElementById('gameCanvas');
+  let touchStartX=0,touchStartY=0;
 
   cv.addEventListener('touchstart',e=>{
     if(e.touches.length!==1)return;
     const t=e.touches[0];
-    // Ignore taps on HUD areas: top 60px, bottom 60px
-    if(t.clientY<60||t.clientY>H-60)return;
+    if(t.clientY<55||t.clientY>H-55)return;
     e.preventDefault();
     initAudio();
-    // Convert screen position to world position
+    touchStartX=t.clientX;touchStartY=t.clientY;
+    isDragging=false;
+
+    // Convert tap to world coords
     const wx=t.clientX/G.zoom+G.camX;
     const wy=t.clientY/G.zoom+G.camY;
-    tapTarget={x:wx,y:wy};
+
+    // Check if tapped on an object
+    let tappedObj=null,bestDist=50;
+    // Check plants first
+    const nearby=getNearby(wx,wy,50);
+    for(const o of nearby){
+      if(o.harvested)continue;
+      const d=Math.sqrt((o.x-wx)**2+(o.y-wy)**2);
+      if(d<bestDist){bestDist=d;tappedObj=o}
+    }
+    // Check structures (not in spatial grid, check all)
+    for(const o of G.worldObjects){
+      if(!o.interactable||o.type==='plant'||o.harvested)continue;
+      const d=Math.sqrt((o.x-wx)**2+(o.y-wy)**2);
+      if(d<bestDist){bestDist=d;tappedObj=o}
+    }
+    // Check NPCs
+    for(const npc of G.npcs){
+      const d=Math.sqrt((npc.x-wx)**2+(npc.y-wy)**2);
+      if(d<bestDist){bestDist=d;tappedObj={type:'npc',npc,x:npc.x,y:npc.y,name:npc.n,emoji:npc.e,interactable:true,interact:'npc'}}
+    }
+
+    if(tappedObj){
+      // Check if already close enough to interact immediately
+      const distToPlayer=Math.sqrt((G.px-tappedObj.x)**2+(G.py-tappedObj.y)**2);
+      if(distToPlayer<45){
+        // Close enough — interact now
+        tapTarget=null;G.joyX=0;G.joyY=0;G.vx=0;G.vy=0;
+        if(tappedObj.type==='plant'&&!tappedObj.harvested)harvestPlant(tappedObj);
+        else if(tappedObj.interact){G.nearObject=tappedObj;interactWorld()}
+      }else{
+        // Walk to object, then interact on arrival
+        tapTarget={x:tappedObj.x,y:tappedObj.y,obj:tappedObj};
+      }
+    }else{
+      // Tap on empty ground — just walk there
+      tapTarget={x:wx,y:wy,obj:null};
+    }
   },{passive:false});
 
-  // Drag to update target position (lets you steer by dragging)
   cv.addEventListener('touchmove',e=>{
-    if(!tapTarget||e.touches.length!==1)return;
+    if(e.touches.length!==1)return;
     const t=e.touches[0];
-    if(t.clientY<60||t.clientY>H-60)return;
-    e.preventDefault();
-    tapTarget.x=t.clientX/G.zoom+G.camX;
-    tapTarget.y=t.clientY/G.zoom+G.camY;
+    const moved=Math.abs(t.clientX-touchStartX)+Math.abs(t.clientY-touchStartY);
+    if(moved>15)isDragging=true;
+    // Only update target if dragging significantly (avoids jitter)
+    if(isDragging){
+      e.preventDefault();
+      const wx=t.clientX/G.zoom+G.camX;
+      const wy=t.clientY/G.zoom+G.camY;
+      tapTarget={x:wx,y:wy,obj:null};
+    }
   },{passive:false});
 
-  // Double-tap to interact with nearest object
-  let lastTap=0;
   cv.addEventListener('touchend',e=>{
-    const now=Date.now();
-    if(now-lastTap<300)interactWorld();
-    lastTap=now;
-    // DON'T clear tapTarget here — character keeps walking to destination
+    // If it was a drag, stop on release
+    if(isDragging){tapTarget=null;G.joyX=0;G.joyY=0}
+    isDragging=false;
   },{passive:true});
 }
 
-// Called every frame in update() to drive movement from tap target
 function updateTapMove(){
   if(!tapTarget)return;
   const dx=tapTarget.x-G.px,dy=tapTarget.y-G.py;
   const d=Math.sqrt(dx*dx+dy*dy);
-  if(d<25){
-    // Arrived at destination
-    tapTarget=null;G.joyX=0;G.joyY=0;
+  const arriveRadius=tapTarget.obj?40:20;
+
+  if(d<arriveRadius){
+    // Arrived
+    G.joyX=0;G.joyY=0;G.vx=0;G.vy=0;
+    // If there's a target object, interact with it
+    if(tapTarget.obj){
+      const o=tapTarget.obj;
+      if(o.type==='plant'&&!o.harvested)harvestPlant(o);
+      else if(o.interact){G.nearObject=o;interactWorld()}
+    }
+    tapTarget=null;
   }else{
     G.joyX=dx/d;G.joyY=dy/d;
   }
 }
 
-// Draw tap target indicator in world space (called from render)
 function drawTapTarget(){
   if(!tapTarget)return;
-  const pulse=Math.sin(animFrame*.1)*.3+.7;
-  ctx.strokeStyle=`rgba(200,168,64,${pulse*.5})`;ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.arc(tapTarget.x,tapTarget.y,8+pulse*4,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.arc(tapTarget.x,tapTarget.y,2,0,Math.PI*2);ctx.fillStyle=`rgba(200,168,64,${pulse})`;ctx.fill();
+  const pulse=Math.sin(animFrame*.12)*.3+.7;
+  // Gold circle for ground, green for plant, orange for structure
+  const col=tapTarget.obj?.type==='plant'?'90,154,48':tapTarget.obj?'200,168,64':'200,168,64';
+  ctx.strokeStyle=`rgba(${col},${pulse*.6})`;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(tapTarget.x,tapTarget.y,6+pulse*5,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle=`rgba(${col},${pulse*.8})`;ctx.beginPath();ctx.arc(tapTarget.x,tapTarget.y,2,0,Math.PI*2);ctx.fill();
 }
 
 // ══════════════════════════════════════════════════════════
