@@ -215,8 +215,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--parchment
   <div class="title-stats"><span>🌿 <b>225</b> species</span><span>🍄 <b>75</b> mushrooms</span><span>⚗️ <b>500+</b> fusions</span><span>🪐 <b>6</b> worlds</span></div>
   <div class="title-buttons">
     <button class="btn btn-primary btn-lg btn-full" onclick="startGame()">Enter the Wilderness</button>
+    <button class="btn btn-mystic btn-full" onclick="startGame(true)">Daily Challenge</button>
     <button class="btn btn-full" onclick="openModal('howto-modal')">How to Survive</button>
     <button class="btn btn-full" onclick="openModal('codex-modal')">The Grand Botanica</button>
+    <button class="btn btn-full" onclick="openModal('journal-modal');renderJournal()">Botanical Journal</button>
   </div>
 </div>
 <div id="game-screen">
@@ -225,6 +227,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--parchment
     <div class="survival-meter" title="Health"><canvas id="meter-hp" width="100" height="100"></canvas><div class="meter-icon">❤️</div><div class="meter-val" id="hp-val">100</div></div>
     <div class="survival-meter" title="Sanity"><canvas id="meter-sanity" width="100" height="100"></canvas><div class="meter-icon">🧠</div><div class="meter-val" id="sanity-val">100</div></div>
     <div class="survival-meter" title="Energy"><canvas id="meter-energy" width="100" height="100"></canvas><div class="meter-icon">⚡</div><div class="meter-val" id="energy-val">100</div></div>
+    <div class="survival-meter" title="Hunger"><canvas id="meter-hunger" width="100" height="100"></canvas><div class="meter-icon">🍖</div><div class="meter-val" id="hunger-val">80</div></div>
   </div>
   <div class="hud-clock"><div class="clock-ring"><div class="clock-day" id="clock-day"></div><div class="clock-label" id="clock-label">DAY</div></div><div class="clock-turn" id="clock-turn">Turn 1</div><div class="clock-season" id="clock-season">🌱 Spring</div></div>
   <div class="hud-resources">
@@ -310,6 +313,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--parchment
 
 <div class="modal-backdrop" id="evolve-modal"><div class="modal-content" style="max-width:400px"><div class="modal-header"><span class="modal-title">🧬 Evolution!</span><button class="modal-close" onclick="closeModal('evolve-modal')">✕</button></div><div id="evolve-content"></div></div></div>
 
+<div class="modal-backdrop" id="journal-modal"><div class="modal-content" style="max-width:560px"><div class="modal-header"><span class="modal-title">📖 Botanical Journal</span><button class="modal-close" onclick="closeModal('journal-modal')">✕</button></div>
+<div id="journal-stats" style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.5rem"></div>
+<div class="filter-row" id="journal-filters"></div>
+<input class="search-box" id="journal-search" placeholder="Search your discoveries..." oninput="renderJournal()">
+<div id="journal-grid" class="card-grid"></div></div></div>
+
+<div class="modal-backdrop" id="runsummary-modal"><div class="modal-content" style="max-width:420px;text-align:center"><div class="modal-header"><span class="modal-title">Run Summary</span><button class="modal-close" onclick="closeModal('runsummary-modal')">✕</button></div>
+<div id="runsummary-content"></div></div></div>
+
+<div id="discovery-overlay" style="position:fixed;inset:0;z-index:270;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);pointer-events:none">
+<div id="discovery-content" style="animation:modalIn .3s ease"></div></div>
+
 <script src="botanica.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -350,7 +365,29 @@ prestigeCount:0,prestigeBonus:1,achieved:new Set(),shadowKills:0,
 camX:0,camY:0,zoom:1,keys:{},joyX:0,joyY:0,nearObject:null,craftOpen:false,
 weather:'clear',weatherTimer:0,weatherIntensity:0,
 tutStep:0,tutDone:false,companions:[],
-worldSeed:Math.floor(Math.random()*999999),invSort:'name'};
+worldSeed:Math.floor(Math.random()*999999),invSort:'name',
+// New systems
+triedFusions:new Set(),compost:0,essence:0,
+journalEntries:{},firstDiscoveries:{},
+runStats:{plantsCollected:0,rarestFind:'',rarestRarity:0,biomesExplored:new Set(),fusionsTried:0,fusionsSucceeded:0,startTime:Date.now()},
+seasonalEvents:[],hunger:80,maxHunger:100,
+growthStages:{}, // plantObjId -> growth stage (0=seed,1=sprout,2=mature,3=wilting)
+discoveryPause:0,discoveryPlant:null,
+dailySeed:null,
+unlockedBiomes:new Set(['plains','forest']),
+totalLifetimeDiscoveries:0,totalLifetimeRuns:0,
+proximityChimeCD:0};
+
+// ── META-PROGRESSION (persists across ALL runs via localStorage) ──
+const META=loadMeta();
+function loadMeta(){
+  try{const d=localStorage.getItem('verdant_meta');if(d){const m=JSON.parse(d);m.journal=m.journal||{};m.totalDisc=m.totalDisc||0;m.totalRuns=m.totalRuns||0;m.totalPlants=m.totalPlants||0;m.bestRun=m.bestRun||null;m.unlockedBiomes=new Set(m.unlockedBiomes||['plains','forest']);m.streak=m.streak||0;m.lastPlayDate=m.lastPlayDate||'';m.allDiscovered=new Set(m.allDiscovered||[]);return m}}catch(e){}
+  return{journal:{},totalDisc:0,totalRuns:0,totalPlants:0,bestRun:null,unlockedBiomes:new Set(['plains','forest']),streak:0,lastPlayDate:'',allDiscovered:new Set()}
+}
+function saveMeta(){
+  try{const m={...META,unlockedBiomes:[...META.unlockedBiomes],allDiscovered:[...META.allDiscovered]};localStorage.setItem('verdant_meta',JSON.stringify(m))}catch(e){}
+}
+function getDailySeed(){const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()}
 
 const TILE=48;let canvas,ctx,W,H,animFrame=0,lastTime=0,audioCtx=null,screenShake=0;
 // Spatial grid for fast lookups (cell size 200px)
@@ -874,6 +911,12 @@ function playSound(type){
   else if(type==='ambient_frog'){const o=audioCtx.createOscillator();o.type='square';o.frequency.setValueAtTime(120,now);o.frequency.exponentialRampToValueAtTime(80,now+.1);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.001,now+.12);o.connect(g);o.start(now);o.stop(now+.12);}
   else if(type==='shadow_ambient'){const o=audioCtx.createOscillator();o.type='sine';o.frequency.setValueAtTime(60+Math.random()*30,now);g.gain.setValueAtTime(.04,now);g.gain.exponentialRampToValueAtTime(.001,now+1);o.connect(g);o.start(now);o.stop(now+1);}
   else if(type==='pickup'){const o=audioCtx.createOscillator();o.type='sine';o.frequency.setValueAtTime(800,now);o.frequency.exponentialRampToValueAtTime(1000,now+.06);g.gain.setValueAtTime(.08,now);g.gain.exponentialRampToValueAtTime(.001,now+.1);o.connect(g);o.start(now);o.stop(now+.1);}
+  else if(type==='discovery'){// Magical ascending arpeggio
+    for(let i=0;i<5;i++){const o=audioCtx.createOscillator();o.type='sine';const f=[523,659,784,1047,1318][i];o.frequency.setValueAtTime(f,now+i*.08);const g2=audioCtx.createGain();g2.gain.setValueAtTime(.08,now+i*.08);g2.gain.exponentialRampToValueAtTime(.001,now+i*.08+.3);o.connect(g2);g2.connect(audioCtx.destination);o.start(now+i*.08);o.stop(now+i*.08+.3)}}
+  else if(type==='chime'){const o=audioCtx.createOscillator();o.type='sine';o.frequency.setValueAtTime(1200,now);o.frequency.exponentialRampToValueAtTime(1800,now+.15);g.gain.setValueAtTime(.04,now);g.gain.exponentialRampToValueAtTime(.001,now+.3);o.connect(g);o.start(now);o.stop(now+.3);}
+  else if(type==='seasonal'){const o=audioCtx.createOscillator();o.type='triangle';o.frequency.setValueAtTime(300,now);o.frequency.setValueAtTime(400,now+.15);o.frequency.setValueAtTime(350,now+.3);g.gain.setValueAtTime(.08,now);g.gain.exponentialRampToValueAtTime(.001,now+.5);o.connect(g);o.start(now);o.stop(now+.5);}
+  else if(type==='danger'){const o=audioCtx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(100,now);o.frequency.setValueAtTime(80,now+.1);o.frequency.setValueAtTime(100,now+.2);g.gain.setValueAtTime(.06,now);g.gain.exponentialRampToValueAtTime(.001,now+.3);o.connect(g);o.start(now);o.stop(now+.3);}
+  else if(type==='compost'){const o=audioCtx.createOscillator();o.type='triangle';o.frequency.setValueAtTime(200,now);o.frequency.exponentialRampToValueAtTime(150,now+.2);g.gain.setValueAtTime(.06,now);g.gain.exponentialRampToValueAtTime(.001,now+.2);o.connect(g);o.start(now);o.stop(now+.2);}
   }catch(e){}
 }
 let ambientInterval=null;
@@ -888,8 +931,9 @@ function startAmbient(){
     const s=audioCtx.createBufferSource();s.buffer=buf;
     const flt=audioCtx.createBiquadFilter();flt.type='lowpass';flt.frequency.value=G.isNight?200:400;
     g.gain.value=G.isNight?.04:.02;s.connect(flt);flt.connect(g);s.start();
-    // Cricket at night
-    if(G.isNight&&Math.random()<.3){const o=audioCtx.createOscillator();o.type='sine';o.frequency.value=4000+Math.random()*2000;const g2=audioCtx.createGain();g2.gain.setValueAtTime(.02,now);g2.gain.exponentialRampToValueAtTime(.001,now+.1);o.connect(g2);g2.connect(audioCtx.destination);o.start(now);o.stop(now+.1);}
+    // Cricket at night — BUT silence when enemies are close (Don't Starve trick)
+    const nearestEnemy=G.enemies.reduce((best,e)=>{const d=Math.sqrt((e.x-G.px)**2+(e.y-G.py)**2);return d<best?d:best},999);
+    if(G.isNight&&Math.random()<.3&&nearestEnemy>200){const o=audioCtx.createOscillator();o.type='sine';o.frequency.value=4000+Math.random()*2000;const g2=audioCtx.createGain();g2.gain.setValueAtTime(.02,now);g2.gain.exponentialRampToValueAtTime(.001,now+.1);o.connect(g2);g2.connect(audioCtx.destination);o.start(now);o.stop(now+.1);}
     // Bird sounds during day
     if(!G.isNight&&Math.random()<.2)playSound('ambient_bird');
     // Frog sounds near swamp
@@ -898,6 +942,11 @@ function startAmbient(){
     if(pb==='swamp'&&Math.random()<.3)playSound('ambient_frog');
     // Shadow drones at night
     if(G.isNight&&G.enemies.length>0&&Math.random()<.2)playSound('shadow_ambient');
+    // Proximity chime for rare undiscovered plants nearby
+    if(G.proximityChimeCD<=0){
+      const rarePlants=getNearby(G.px,G.py,150).filter(o=>o.type==='plant'&&!o.harvested&&o.rarity>=4&&!G.disc.has(o.plantId));
+      if(rarePlants.length>0){playSound('chime');G.proximityChimeCD=8}
+    }
     }catch(e){}
   },3000);
 }
@@ -938,7 +987,7 @@ function generateWorld(){
     const r=Math.random();
     if(r<bd.td){const tm={forest:'🌲',jungle:'🌴',plains:'🌳',desert:'🌵',swamp:'🌳',tundra:'🎄',savanna:'🌳',mountain:'🌲',coastal:'🌴',toxic:'🌲'};G.worldObjects.push({type:'tree',x:wx,y:wy,emoji:tm[biome]||'🌳',name:'Tree',solid:true,shake:0});}
     else if(r<bd.td+.04)G.worldObjects.push({type:'rock',x:wx,y:wy,emoji:'🪨',name:'Boulder',solid:true});
-    else if(r<bd.td+.12){const pool=[...(bd.plants||[]),...GLOBALS].filter(id=>B[id]);if(pool.length){const pid=pool[Math.floor(Math.random()*pool.length)],p=B[pid];G.worldObjects.push({type:'plant',x:wx,y:wy,emoji:p.e,name:p.n||p.name,plantId:pid,interactable:true,interact:'harvest',harvested:false,rarity:p.r,isMushroom:p.type==='mushroom',glow:p.type==='mushroom'?'#c88030':null,glowR:p.type==='mushroom'?35:0,regrowTimer:0});}}
+    else if(r<bd.td+.12){const pool=[...(bd.plants||[]),...GLOBALS].filter(id=>B[id]);if(pool.length){const pid=pool[Math.floor(Math.random()*pool.length)],p=B[pid];G.worldObjects.push({type:'plant',x:wx,y:wy,emoji:p.e,name:p.n||p.name,plantId:pid,interactable:true,interact:'harvest',harvested:false,rarity:p.r,isMushroom:p.type==='mushroom',glow:p.type==='mushroom'?'#c88030':null,glowR:p.type==='mushroom'?35:0,regrowTimer:0,growStage:2,growTimer:0,biome});}}
   }
   // Points of interest — ruins, shrines, rare groves
   const poiTypes=[
@@ -995,10 +1044,13 @@ function update(dt){
   if(G.keys.ArrowLeft||G.keys.KeyA||G.keys.a)mx=-1;if(G.keys.ArrowRight||G.keys.KeyD||G.keys.d)mx=1;
   updateTapMove();
   if(G.joyX||G.joyY){mx=G.joyX;my=G.joyY}
-  // Smooth acceleration/deceleration
+  // Smooth acceleration/deceleration — SPEED AFFECTED BY ENERGY & HP
   if(!G.vx)G.vx=0;if(!G.vy)G.vy=0;
+  const energyMult=G.energy<20?.5:G.energy<40?.75:1;
+  const hpMult=G.hp<20?.6:G.hp<40?.85:1;
+  const effectiveSpeed=G.pSpeed*energyMult*hpMult;
   const accel=12,friction=8;
-  if(mx||my){const len=Math.sqrt(mx*mx+my*my);mx/=len;my/=len;G.vx+=(mx*G.pSpeed-G.vx)*accel*dt;G.vy+=(my*G.pSpeed-G.vy)*accel*dt;G.pdir=Math.atan2(my,mx);G.pframe+=dt*8}
+  if(mx||my){const len=Math.sqrt(mx*mx+my*my);mx/=len;my/=len;G.vx+=(mx*effectiveSpeed-G.vx)*accel*dt;G.vy+=(my*effectiveSpeed-G.vy)*accel*dt;G.pdir=Math.atan2(my,mx);G.pframe+=dt*8}
   else{G.vx*=(1-friction*dt);G.vy*=(1-friction*dt);if(Math.abs(G.vx)<.01)G.vx=0;if(Math.abs(G.vy)<.01)G.vy=0}
   if(G.vx||G.vy){
     const spd=60,nx=G.px+G.vx*spd*dt,ny=G.py+G.vy*spd*dt;
@@ -1028,26 +1080,96 @@ function update(dt){
   document.getElementById('clock-day').style.setProperty('--day-angle',(G.dayTime%1)*360+'deg');
   document.getElementById('clock-label').textContent=G.isNight?'NIGHT':'DAY';
   // Seasons
-  G.seasonTimer+=dt;if(G.seasonTimer>60){G.seasonTimer=0;G.season=(G.season+1)%4;document.getElementById('clock-season').textContent=SEASONS[G.season];toast(SEASONS[G.season]+' has arrived!','info')}
-  // Sanity
-  if(G.isNight){G.sanity=Math.max(0,G.sanity-dt*2);for(const o of G.worldObjects)if(o.type==='campfire'){const dx=G.px-o.x,dy=G.py-o.y;if(Math.sqrt(dx*dx+dy*dy)<o.glowR)G.sanity=Math.min(G.maxSanity,G.sanity+dt*5)}}
-  else G.sanity=Math.min(G.maxSanity,G.sanity+dt*.5);
-  G.energy=Math.min(G.maxEnergy,G.energy+dt*1.5);
-  // Plant regrow
-  for(const o of G.worldObjects)if(o.type==='plant'&&o.harvested){o.regrowTimer-=dt;if(o.regrowTimer<=0)o.harvested=false}
-  // 3. Hostile enemies at night
-  if(G.isNight&&animFrame%120===0&&G.enemies.length<5+G.turn){
-    const angle=Math.random()*Math.PI*2,dist=400+Math.random()*200;
-    G.enemies.push({x:G.px+Math.cos(angle)*dist,y:G.py+Math.sin(angle)*dist,hp:15+G.turn*2,maxHp:15+G.turn*2,spd:1.2,dmg:3+Math.floor(G.turn/3),emoji:'👁',name:'Shadow Creature',attackCD:0});
+  G.seasonTimer+=dt;if(G.seasonTimer>60){G.seasonTimer=0;G.season=(G.season+1)%4;document.getElementById('clock-season').textContent=SEASONS[G.season];
+    playSound('seasonal');screenShake=3;
+    const seasonMsgs=[
+      'Spring arrives. Rain nourishes the earth, but beware flooding!',
+      'Summer burns. The heat wilts plants and drains your strength.',
+      'Autumn winds carry rare spores. Shadows grow restless...',
+      'Winter descends. Resources are scarce. Survive the cold.'
+    ];
+    toast(SEASONS[G.season]+' — '+seasonMsgs[G.season],'info')}
+  // ── INTERCONNECTED SURVIVAL METERS ──
+  // Sanity: drains at night, affected by corruption proximity, restored by campfire
+  const inCorruption=G.corruptionTiles.has(Math.floor(G.py/TILE)*G.worldW+Math.floor(G.px/TILE));
+  if(G.isNight){
+    G.sanity=Math.max(0,G.sanity-dt*2);
+    for(const o of G.worldObjects)if(o.type==='campfire'){const dx=G.px-o.x,dy=G.py-o.y;if(Math.sqrt(dx*dx+dy*dy)<o.glowR)G.sanity=Math.min(G.maxSanity,G.sanity+dt*5)}
+  } else G.sanity=Math.min(G.maxSanity,G.sanity+dt*.5);
+  if(inCorruption)G.sanity=Math.max(0,G.sanity-dt*3);
+  // Low sanity → HP drain (madness hurts)
+  if(G.sanity<15)G.hp=Math.max(1,G.hp-dt*.5);
+
+  // Energy: slowly regens, drains when walking, low hunger slows regen
+  const hungerRegenMult=G.hunger>50?1:G.hunger>20?.4:0;
+  G.energy=Math.min(G.maxEnergy,G.energy+dt*1.5*hungerRegenMult);
+  if((G.vx||G.vy)&&(mx||my))G.energy=Math.max(0,G.energy-dt*.3);
+
+  // Hunger: slowly decreases, affects everything
+  G.hunger=Math.max(0,G.hunger-dt*.15);
+  if(G.hunger<10){G.hp=Math.max(1,G.hp-dt*.3);if(animFrame%300===0)toast('Starving...','er')}
+  // Eating plants restores hunger (handled in harvestPlant)
+
+  // HP: natural slow regen when well-fed and sane
+  if(G.hunger>60&&G.sanity>50)G.hp=Math.min(G.maxHp,G.hp+dt*.2);
+  // Low HP screen pulse
+  if(G.hp<25&&animFrame%60===0)screenFlash('rgba(138,32,32,.15)');
+
+  // Proximity chime cooldown
+  if(G.proximityChimeCD>0)G.proximityChimeCD-=dt;
+
+  // Discovery pause countdown
+  if(G.discoveryPause>0){G.discoveryPause-=dt;if(G.discoveryPause<=0)G.discoveryPlant=null}
+
+  // Plant regrow with growth stages
+  for(const o of G.worldObjects){
+    if(o.type==='plant'&&o.harvested){
+      o.regrowTimer-=dt;
+      if(o.regrowTimer<=0){o.harvested=false;o.growStage=0;o.growTimer=0}
+    }
+    // Growth stages for unharvested plants
+    if(o.type==='plant'&&!o.harvested&&o.growStage!==undefined){
+      o.growTimer=(o.growTimer||0)+dt;
+      const growRate=SEASON_FX[G.season]?.growth||1;
+      if(o.growStage<2&&o.growTimer>8/growRate){o.growStage++;o.growTimer=0}
+      // Wilting in winter/drought
+      if(G.season===3&&o.growStage===2&&Math.random()<.0001)o.growStage=3;
+    }
   }
-  if(!G.isNight&&G.enemies.length>0)G.enemies.length=0; // shadows flee at dawn
+
+  // ── SEASONAL PRESSURE ──
+  // Spring: rain boosts growth, flooding risk
+  if(G.season===0&&G.weather==='rain'&&animFrame%300===0){
+    const floodChance=.15;
+    if(Math.random()<floodChance){
+      const near=getNearby(G.px,G.py,300).filter(o=>o.type==='plant'&&!o.harvested);
+      if(near.length>0){const victim=near[Math.floor(Math.random()*near.length)];victim.harvested=true;victim.regrowTimer=30;toast('Flooding washed away a plant!','er')}
+    }
+  }
+  // Summer: drought wilts, fire risk near campfire
+  if(G.season===1&&animFrame%500===0&&Math.random()<.1){
+    G.hunger=Math.max(0,G.hunger-3);toast('The heat is draining...','er')
+  }
+  // Winter: scarcity — energy drains faster
+  if(G.season===3){G.energy=Math.max(0,G.energy-dt*.3);G.hunger=Math.max(0,G.hunger-dt*.05)}
+
+  // 3. Hostile enemies at night — MORE at low sanity
+  const sanityEnemyBonus=G.sanity<30?3:G.sanity<50?1:0;
+  const maxEnemies=5+G.turn+sanityEnemyBonus;
+  const spawnRate=G.sanity<20?60:120;
+  if(G.isNight&&animFrame%spawnRate===0&&G.enemies.length<maxEnemies){
+    const angle=Math.random()*Math.PI*2,dist=400+Math.random()*200;
+    const hpMod=G.sanity<30?1.5:1;
+    G.enemies.push({x:G.px+Math.cos(angle)*dist,y:G.py+Math.sin(angle)*dist,hp:Math.floor((15+G.turn*2)*hpMod),maxHp:Math.floor((15+G.turn*2)*hpMod),spd:1.2+(G.sanity<20?.3:0),dmg:3+Math.floor(G.turn/3),emoji:'👁',name:'Shadow Creature',attackCD:0});
+  }
+  if(!G.isNight&&G.enemies.length>0)G.enemies.length=0;
   // Enemy AI
   for(let i=G.enemies.length-1;i>=0;i--){
     const e=G.enemies[i],dx=G.px-e.x,dy=G.py-e.y,dist=Math.sqrt(dx*dx+dy*dy);
     if(dist<300){e.x+=dx/dist*e.spd*60*dt;e.y+=dy/dist*e.spd*60*dt}
     if(dist<30){e.attackCD-=dt;if(e.attackCD<=0){G.hp=Math.max(0,G.hp-e.dmg);G.sanity=Math.max(0,G.sanity-5);screenFlash('#4a2050');playSound('hit');screenShake=8;e.attackCD=1.5}}
     // Companion auto-fight
-    for(const comp of G.companions){const cdx=comp.x-e.x,cdy=comp.y-e.y;if(Math.sqrt(cdx*cdx+cdy*cdy)<50){e.hp-=2*dt*60;if(e.hp<=0){G.enemies.splice(i,1);G.shadowKills++;G.seeds+=5;toast('Shadow destroyed! +5 seeds','ok');playSound('harvest');break}}}
+    for(const comp of G.companions){const cdx=comp.x-e.x,cdy=comp.y-e.y;if(Math.sqrt(cdx*cdx+cdy*cdy)<50){e.hp-=2*dt*60;if(e.hp<=0){G.enemies.splice(i,1);G.shadowKills++;G.seeds+=5;G.essence+=1;G.sanity=Math.min(G.maxSanity,G.sanity+3);toast('Shadow destroyed! +5 seeds +1 essence','ok');playSound('harvest');emitParticle(e.x,e.y,'harvest',8);break}}}
   }
   // NPC roaming
   for(const npc of G.npcs){npc.moveTimer-=dt;if(npc.moveTimer<=0){npc.moveDir=Math.random()*Math.PI*2;npc.moveTimer=2+Math.random()*4}npc.x+=Math.cos(npc.moveDir)*.5*60*dt;npc.y+=Math.sin(npc.moveDir)*.5*60*dt}
@@ -1070,7 +1192,7 @@ function update(dt){
   const popup=document.getElementById('interact-popup');
   if(G.nearObject){popup.innerHTML=`<span class="interact-key">E</span> ${G.nearObject.name}`;popup.classList.add('show')}else popup.classList.remove('show');
   // Meters (throttled to every 5 frames)
-  if(animFrame%5===0){updateMeter('meter-hp',G.hp,G.maxHp,'#8a2020','#b03030');updateMeter('meter-sanity',G.sanity,G.maxSanity,'#4a3a6a','#7a5aaa');updateMeter('meter-energy',G.energy,G.maxEnergy,'#6a6a20','#c8a840');document.getElementById('hp-val').textContent=Math.round(G.hp);document.getElementById('sanity-val').textContent=Math.round(G.sanity);document.getElementById('energy-val').textContent=Math.round(G.energy)}
+  if(animFrame%5===0){updateMeter('meter-hp',G.hp,G.maxHp,'#8a2020','#b03030');updateMeter('meter-sanity',G.sanity,G.maxSanity,'#4a3a6a','#7a5aaa');updateMeter('meter-energy',G.energy,G.maxEnergy,'#6a6a20','#c8a840');updateMeter('meter-hunger',G.hunger,G.maxHunger,'#6a4a20','#c88040');document.getElementById('hp-val').textContent=Math.round(G.hp);document.getElementById('sanity-val').textContent=Math.round(G.sanity);document.getElementById('energy-val').textContent=Math.round(G.energy);document.getElementById('hunger-val').textContent=Math.round(G.hunger)}
   // 4. Weather
   G.weatherTimer-=dt;if(G.weatherTimer<=0){G.weatherTimer=30+Math.random()*60;const weathers=['clear','clear','rain','fog','clear'];if(G.season===0)weathers.push('rain','rain');if(G.season===2)weathers.push('fog','fog');if(G.season===3)weathers.push('snow');G.weather=weathers[Math.floor(Math.random()*weathers.length)]}
   updateWeather(dt);
@@ -1199,7 +1321,19 @@ function drawObj(o){
     drawDSRock(ctx,x,y,seed)
   } else if(o.type==='plant'&&!o.harvested){
     const p=B[o.plantId];
-    if(p)drawDSPlant(ctx,x,y,p,seed,o.isMushroom,bob);
+    if(p){
+      // Growth stage visual scaling
+      const stage=o.growStage||2;
+      const scale=stage===0?.4:stage===1?.7:stage===3?.85:1;
+      const alpha=stage===3?.6:1;
+      if(scale!==1){ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.translate(-x,-y)}
+      if(alpha!==1)ctx.globalAlpha=alpha;
+      drawDSPlant(ctx,x,y,p,seed,o.isMushroom,bob);
+      if(alpha!==1)ctx.globalAlpha=1;
+      if(scale!==1)ctx.restore();
+      // Wilting indicator
+      if(stage===3){ctx.fillStyle='rgba(100,80,40,.3)';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill()}
+    }
     // Spore particles from mushrooms
     if(o.isMushroom&&isClose&&animFrame%40===0)emitParticle(x,y-8,'spore',2)
   } else if(o.interactable&&!o.harvested){
@@ -1485,6 +1619,16 @@ function renderMinimap(){
   mx.fillStyle='rgba(232,200,80,.3)';mx.beginPath();mx.arc(mw/2,mh/2,5,0,Math.PI*2);mx.fill();
   mx.fillStyle='#e8c850';mx.beginPath();mx.arc(mw/2,mh/2,2.5,0,Math.PI*2);mx.fill();
   mx.fillStyle='#fff';mx.beginPath();mx.arc(mw/2,mh/2,1,0,Math.PI*2);mx.fill();
+  // POI markers (structures/landmarks)
+  const poiCol={'campfire':'#c86020','cauldron':'#5a9a30','research':'#80b8e0','arena':'#b03030','ruin':'#8080a0','shrine':'#c8a840','grove':'#5aaa30','well':'#5080a0'};
+  for(const o of G.worldObjects){
+    if(o.interactable&&!o.harvested&&o.type!=='plant'&&o.type!=='tree'&&o.type!=='rock'){
+      const sx=(o.x/TILE-vcx+vw/2)*scale,sy=(o.y/TILE-vcy+vh/2)*scale;
+      if(sx>1&&sx<mw-1&&sy>1&&sy<mh-1){
+        mx.fillStyle=poiCol[o.type]||'#d4c4a0';mx.beginPath();mx.rect(sx-1,sy-1,2,2);mx.fill()
+      }
+    }
+  }
   // Minimap border decoration
   mx.strokeStyle='rgba(200,168,64,.2)';mx.lineWidth=1;mx.strokeRect(0,0,mw,mh);
 }
@@ -1642,18 +1786,63 @@ function harvestPlant(o,auto=false){
   const chance=window.calcDropChance?window.calcDropChance(pid,false):(window.RARITY_DROP_RATE?.[p.r]||.5);
   const nursery=G.districts.find(d=>d.id==='nursery'&&d.built)?1.25:1;
   const seasonMult=SEASON_FX[G.season]?.growth||1;
-  if(Math.random()<chance*nursery*G.prestigeBonus*seasonMult){
+  const streakBonus=1+META.streak*.02; // Streak bonus
+  if(Math.random()<chance*nursery*G.prestigeBonus*seasonMult*streakBonus){
+    const isNewDiscovery=!G.disc.has(pid);
     G.disc.add(pid);G.inv[pid]=(G.inv[pid]||0)+1;G.seeds+=p.r*3;G.exploredCount++;
-    o.harvested=true;o.regrowTimer=25+Math.random()*25;
+    G.runStats.plantsCollected++;
+    if(p.r>G.runStats.rarestRarity){G.runStats.rarestRarity=p.r;G.runStats.rarestFind=p.n||p.name}
+    o.harvested=true;o.regrowTimer=25+Math.random()*25;o.growStage=0;
     const bk=Object.keys(G.biomes)[Math.floor(Math.random()*8)];G.biomes[bk]=Math.min(100,G.biomes[bk]+1);
     if(G.agenda)G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+2);
+    // Hunger restored by eating plants
+    const hungerRestore=p.type==='herb'?8:p.type==='mushroom'?12:p.type==='flower'?4:5;
+    G.hunger=Math.min(G.maxHunger,G.hunger+hungerRestore);
+    // Plants affect multiple meters
+    if(p.type==='herb'){G.hp=Math.min(G.maxHp,G.hp+3);G.sanity=Math.min(G.maxSanity,G.sanity+2)}
+    if(p.type==='mushroom'){G.sanity=Math.min(G.maxSanity,G.sanity+5);G.energy=Math.min(G.maxEnergy,G.energy+8)}
+    if(p.type==='toxic'){G.sanity=Math.max(0,G.sanity-8);G.hp=Math.max(1,G.hp-5)}
+    if(p.type==='entheogen'){G.sanity=Math.max(0,G.sanity-15);G.energy=Math.min(G.maxEnergy,G.energy+20)}
+
     addFloatingText(o.x,o.y-15,`+ ${p.n||p.name}`,p.type==='mushroom'?'#c88030':'#90d060');
     emitParticle(o.x,o.y-5,'harvest',6);
     if(p.type==='mushroom'){emitParticle(o.x,o.y-8,'spore',8);if(!auto)toast(`RARE! ${p.n||p.name}!`,'mu');playSound('rare');screenFlash('#c88030')}
     else{playSound('harvest')}
     G.worldObjects.filter(t=>t.type==='tree'&&Math.abs(t.x-o.x)<60&&Math.abs(t.y-o.y)<60).forEach(t=>t.shake=8);
+
+    // ── NEW DISCOVERY ANIMATION ──
+    if(isNewDiscovery){
+      META.allDiscovered.add(pid);META.totalDisc++;
+      // Journal entry
+      META.journal[pid]={name:p.n||p.name,type:p.type,rarity:p.r,biome:o.biome||'unknown',turn:G.turn,season:G.season};
+      saveMeta();
+      // Discovery pause + dramatic effect
+      if(!auto&&p.r>=3){
+        G.discoveryPause=1.5;G.discoveryPlant=p;
+        playSound('discovery');screenShake=4;
+        emitParticle(o.x,o.y-10,'harvest',12);
+        showDiscoveryOverlay(p);
+      } else if(!auto){
+        toast(`Discovered: ${p.n||p.name}`,'ok');playSound('pickup')
+      }
+      // Unlock biomes based on total discoveries
+      if(META.totalDisc>=5)META.unlockedBiomes.add('jungle');
+      if(META.totalDisc>=10)META.unlockedBiomes.add('swamp');
+      if(META.totalDisc>=15)META.unlockedBiomes.add('desert');
+      if(META.totalDisc>=20)META.unlockedBiomes.add('tundra');
+      if(META.totalDisc>=30)META.unlockedBiomes.add('mountain');
+      if(META.totalDisc>=40)META.unlockedBiomes.add('savanna');
+      if(META.totalDisc>=50)META.unlockedBiomes.add('coastal');
+      if(META.totalDisc>=60)META.unlockedBiomes.add('toxic');
+      saveMeta();
+    }
     updateRes();renderHotbar();
-  }else{o.harvested=true;o.regrowTimer=12+Math.random()*12;if(!auto)toast('Nothing found...','er')}
+  }else{
+    o.harvested=true;o.regrowTimer=12+Math.random()*12;
+    // Failed harvest gives compost
+    G.compost++;
+    if(!auto)toast('Nothing found... (+1 compost)','er');playSound('compost')
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1690,15 +1879,39 @@ function doFuse(){
   const fc=G.districts.find(d=>d.id==='forge'&&d.built)?0:1;if(G.spores<Math.max(1,fc)){toast('Need Spore Charges!','er');return}
   const need={};for(const id of ings)need[id]=(need[id]||0)+1;for(const[id,q]of Object.entries(need))if((G.inv[id]||0)<q){toast(`Not enough ${B[id]?.n||B[id]?.name}!`,'er');return}
   G.spores-=Math.max(1,fc);for(const[id,q]of Object.entries(need))G.inv[id]-=q;
-  const c=buildCreature(ings);G.creatures.push(c);G.cauldron=[null,null,null,null];
-  // 2. Add companion
+  G.runStats.fusionsTried++;
+  const fusionKey=[...ings].sort().join('+');
+  G.triedFusions.add(fusionKey);
+
+  // Check if this is a known recipe or random fusion
+  const isRecipe=!!RECIPES[fusionKey];
+
+  // Compost bonus: 10 compost → +1 to all stats
+  const compostBonus=Math.floor(G.compost/10);
+  if(compostBonus>0)G.compost-=compostBonus*10;
+
+  const c=buildCreature(ings);
+  if(compostBonus>0){Object.keys(c.stats).forEach(k=>c.stats[k]+=compostBonus);c.mhp+=compostBonus*5;c.hp=c.mhp}
+
+  G.creatures.push(c);G.cauldron=[null,null,null,null];
+  G.runStats.fusionsSucceeded++;
+  // Add companion
   G.companions.push({x:G.px+30,y:G.py+20,emoji:c.e,name:c.n,idx:G.companions.length});
   const fr=document.getElementById('fusion-result');fr.style.display='block';
-  fr.innerHTML=`<div class="tc"><div style="font-size:2.2rem">${c.e}</div>${c.c==='apex'?'<div class="badge b-gold">APEX</div>':''}<div style="font-family:var(--fd);font-size:.85rem;color:var(--gold);margin:.2rem 0">${c.n}</div><span class="cc-class cls-${c.c[0]}">${c.c.toUpperCase()} T${c.t}</span><p style="font-size:.65rem;color:var(--parchment2);margin:.4rem 0">${c.d}</p></div>`;
-  renderCauldron();updateRes();playSound('fuse');
+  fr.innerHTML=`<div class="tc"><div style="font-size:2.2rem">${c.e}</div>${c.c==='apex'?'<div class="badge b-gold">APEX</div>':''}<div style="font-family:var(--fd);font-size:.85rem;color:var(--gold);margin:.2rem 0">${c.n}</div><span class="cc-class cls-${c.c[0]}">${c.c.toUpperCase()} T${c.t}</span><p style="font-size:.65rem;color:var(--parchment2);margin:.4rem 0">${c.d}</p>${compostBonus>0?`<div class="badge b-green">+${compostBonus} all stats from compost</div>`:''}</div>`;
+  renderCauldron();updateRes();playSound('fuse');screenShake=6;
+  emitParticle(G.px,G.py-20,'harvest',15);
   if(G.agenda)G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+8);
   toast(`${c.c==='apex'?'APEX: ':''}${c.n} forged!`,c.c==='apex'?'mu':'ok');
-  if(c.c==='apex')screenFlash('#c8a840');checkVictory();
+  if(c.c==='apex'){screenFlash('#c8a840');screenShake=12}
+  checkVictory();
+}
+// Essence system: spend essence to boost creature stats
+function spendEssence(idx,stat){
+  if(G.essence<5){toast('Need 5 essence!','er');return}
+  G.essence-=5;const c=G.creatures[idx];if(!c)return;
+  c.stats[stat]=(c.stats[stat]||0)+2;c.mhp=c.stats.def*10+c.stats.heal*5+20;
+  toast(`${c.n} +2 ${stat.toUpperCase()}!`,'ok');playSound('build')
 }
 function buildCreature(ings){
   const key=[...ings].sort().join('+'),rec=RECIPES[key];
@@ -1764,7 +1977,20 @@ function renderWorlds(){
 }
 function buildDist(id){const d=G.districts.find(x=>x.id===id);if(!d||d.built||!d.unlocked)return;if(G.seeds<(d.cost.s||0)||G.spores<(d.cost.sp||0)){toast(`Need 🌱${d.cost.s}${d.cost.sp?' ⚗️'+d.cost.sp:''}!`,'er');return}G.seeds-=d.cost.s||0;G.spores-=d.cost.sp||0;d.built=true;if(G.agenda)G.prog[G.agenda]=Math.min(100,(G.prog[G.agenda]||0)+10);updateRes();renderWorlds();toast(`${d.n} built!`,'gd');playSound('build');screenFlash('#c8a840');checkVictory()}
 function seedPlanet(pid){const p=G.planets.find(x=>x.id===pid);if(!p||p.seeded)return;const apex=G.creatures.filter(c=>c.c==='apex');if(!apex.length){toast('Need Apex creature!','er');return}p.seeded=true;G.prog.exodus=Math.min(100,(G.prog.exodus||0)+35);G.seeds+=100;renderWorlds();updateRes();toast(`🚀 ${apex[0].n} seeded ${p.n}!`,'mu');screenFlash('#7a5aaa');checkVictory()}
-function doPrestige(){if(!G.victories.length){toast('Win first!','er');return}G.prestigeCount++;G.prestigeBonus=1+G.prestigeCount*.15;const keep=new Set(G.disc);G.seeds=80+G.prestigeCount*20;G.spores=3+G.prestigeCount;G.inv={rose:3,sunflower:2,daisy:2,lily:1,mint:2,dandelion:3,moss:2,fern:2,wheat:3};G.creatures=[];G.companions=[];G.districts=JSON.parse(JSON.stringify(DISTRICTS));G.planets=JSON.parse(JSON.stringify(PLANETS));G.biomes={amazon:62,arctic:48,coral:32,savanna:70,forests:65,oceans:38,wetlands:55,mountains:80};G.turn=1;G.crisis=18;G.prog={science:0,nature:0,war:0,exodus:0};G.battles=[];G.victories=[];G.cauldron=[null,null,null,null];G.hp=G.maxHp;G.sanity=G.maxSanity;G.energy=G.maxEnergy;G.disc=keep;generateWorld();updateRes();renderHotbar();toast(`🌀 Ascended! ${Math.round(G.prestigeBonus*100)}% power`,'mu');showAchieve('🌀','Ascension '+G.prestigeCount,`×${G.prestigeBonus.toFixed(2)} stats`)}
+function doPrestige(){if(!G.victories.length){toast('Win first!','er');return}
+  // Show run summary before prestige
+  showRunSummary();
+  G.prestigeCount++;G.prestigeBonus=1+G.prestigeCount*.15;const keep=new Set(G.disc);
+  G.seeds=80+G.prestigeCount*20;G.spores=3+G.prestigeCount;
+  G.inv={rose:3,sunflower:2,daisy:2,lily:1,mint:2,dandelion:3,moss:2,fern:2,wheat:3};
+  G.creatures=[];G.companions=[];G.districts=JSON.parse(JSON.stringify(DISTRICTS));G.planets=JSON.parse(JSON.stringify(PLANETS));
+  G.biomes={amazon:62,arctic:48,coral:32,savanna:70,forests:65,oceans:38,wetlands:55,mountains:80};
+  G.turn=1;G.crisis=18;G.prog={science:0,nature:0,war:0,exodus:0};G.battles=[];G.victories=[];
+  G.cauldron=[null,null,null,null];G.hp=G.maxHp;G.sanity=G.maxSanity;G.energy=G.maxEnergy;G.hunger=G.maxHunger;
+  G.compost=0;G.essence=0;G.triedFusions=new Set();
+  G.runStats={plantsCollected:0,rarestFind:'',rarestRarity:0,biomesExplored:new Set(),fusionsTried:0,fusionsSucceeded:0,startTime:Date.now()};
+  G.disc=keep;generateWorld();updateRes();renderHotbar();
+  toast(`Ascended! ${Math.round(G.prestigeBonus*100)}% power`,'mu');showAchieve('🌀','Ascension '+G.prestigeCount,`x${G.prestigeBonus.toFixed(2)} stats`);saveMeta()}
 
 // ══════════════════════════════════════════════════════════
 //  VICTORY
@@ -1775,13 +2001,137 @@ function showVic(t,s){const v=document.getElementById('victory-overlay');v.inner
 // ═══════════════════════════���══════════════════════════════
 //  13. SAVE / LOAD
 // ══════════════════���═══════════════════════════════════════
-function saveGame(){try{const s={...G};s.disc=[...G.disc];s.achieved=[...G.achieved];s.exploredTiles=[...G.exploredTiles].slice(0,5000);s.corruptionTiles=[...G.corruptionTiles];delete s.keys;delete s.nearObject;localStorage.setItem('verdant_save',JSON.stringify(s));console.log('Saved')}catch(e){}}
-function loadGame(){try{const d=localStorage.getItem('verdant_save');if(!d){toast('No save found','er');return}const s=JSON.parse(d);Object.assign(G,s);G.disc=new Set(s.disc||[]);G.achieved=new Set(s.achieved||[]);G.exploredTiles=new Set(s.exploredTiles||[]);G.corruptionTiles=new Set(s.corruptionTiles||[]);G.keys={};updateRes();renderHotbar();toast('Game loaded!','ok')}catch(e){toast('Load failed','er')}}
+// ══════════════════════════════════════════════════════════
+//  BOTANICAL JOURNAL (meta-progression)
+// ══════════════════════════════════════════════════════════
+let journalFilter='all';
+function renderJournal(){
+  const search=(document.getElementById('journal-search')?.value||'').toLowerCase();
+  const types=['all','flower','herb','mushroom','tree','toxic','aquatic','entheogen'];
+  document.getElementById('journal-filters').innerHTML=types.map(t=>`<button class="fbtn${journalFilter===t?' active':''}" onclick="journalFilter='${t}';renderJournal()">${t==='all'?'All':t}</button>`).join('');
+
+  const totalPlants=Object.keys(B).length;
+  const discovered=META.allDiscovered.size;
+  const pct=Math.round(discovered/totalPlants*100);
+  document.getElementById('journal-stats').innerHTML=`
+    <span class="badge b-green">${discovered}/${totalPlants} species (${pct}%)</span>
+    <span class="badge b-gold">Lifetime runs: ${META.totalRuns}</span>
+    <span class="badge b-blue">Streak: ${META.streak} day${META.streak!==1?'s':''}</span>
+    <span class="badge b-purple">Total plants: ${META.totalPlants}</span>`;
+
+  // Progressive disclosure: only show types the player has found
+  const discoveredTypes=new Set([...META.allDiscovered].map(id=>B[id]?.type).filter(Boolean));
+
+  const entries=[...META.allDiscovered].filter(id=>{
+    const p=B[id];if(!p)return false;
+    if(journalFilter!=='all'&&p.type!==journalFilter)return false;
+    if(search&&!(p.n||p.name||'').toLowerCase().includes(search)&&!(p.sci||'').toLowerCase().includes(search))return false;
+    return true;
+  }).sort((a,b)=>(B[b]?.r||0)-(B[a]?.r||0));
+
+  // Show undiscovered as silhouettes (progressive disclosure)
+  const undiscovered=Object.keys(B).filter(id=>!META.allDiscovered.has(id));
+  const hintCount=Math.min(6,undiscovered.length);
+
+  document.getElementById('journal-grid').innerHTML=entries.map(id=>{
+    const p=B[id],j=META.journal[id]||{};
+    return`<div class="pcard" onclick="showPlantDetail('${id}')"><div class="prr" style="background:${RC[p.r]}"></div><span class="pe">${p.e}</span><div class="pn">${p.n||p.name}</div><div class="pt">${p.type}${j.turn?' · T'+j.turn:''}</div></div>`
+  }).join('')+
+  (hintCount>0?Array(hintCount).fill(0).map(()=>`<div class="pcard" style="opacity:.2;cursor:default"><span class="pe">?</span><div class="pn">???</div><div class="pt">undiscovered</div></div>`).join(''):'');
+}
+
+// ══════════════════════════════════════════════════════════
+//  RUN SUMMARY (shareable)
+// ══════════════════════════════════════════════════════════
+function showRunSummary(){
+  const elapsed=Math.floor((Date.now()-G.runStats.startTime)/1000);
+  const mins=Math.floor(elapsed/60),secs=elapsed%60;
+  const tp=Object.values(G.inv).reduce((a,b)=>a+b,0);
+  const rarities=['Common','Uncommon','Rare','Epic','Legendary','Mythic'];
+  document.getElementById('runsummary-content').innerHTML=`
+    <div style="font-family:var(--fd);font-size:1.2rem;color:var(--gold);margin-bottom:.8rem">VERDANT RUN #${META.totalRuns+1}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;text-align:left;margin-bottom:.8rem">
+      <div class="res-item" style="flex-direction:column;align-items:flex-start;padding:.4rem"><span style="color:var(--parchment3);font-size:.42rem">TURN</span><span class="rv" style="font-size:.9rem">${G.turn}</span></div>
+      <div class="res-item" style="flex-direction:column;align-items:flex-start;padding:.4rem"><span style="color:var(--parchment3);font-size:.42rem">TIME</span><span class="rv" style="font-size:.9rem">${mins}m ${secs}s</span></div>
+      <div class="res-item" style="flex-direction:column;align-items:flex-start;padding:.4rem"><span style="color:var(--parchment3);font-size:.42rem">PLANTS</span><span class="rv" style="font-size:.9rem">${G.runStats.plantsCollected}</span></div>
+      <div class="res-item" style="flex-direction:column;align-items:flex-start;padding:.4rem"><span style="color:var(--parchment3);font-size:.42rem">SPECIES</span><span class="rv" style="font-size:.9rem">${G.disc.size}</span></div>
+      <div class="res-item" style="flex-direction:column;align-items:flex-start;padding:.4rem"><span style="color:var(--parchment3);font-size:.42rem">CREATURES</span><span class="rv" style="font-size:.9rem">${G.creatures.length}</span></div>
+      <div class="res-item" style="flex-direction:column;align-items:flex-start;padding:.4rem"><span style="color:var(--parchment3);font-size:.42rem">SHADOWS</span><span class="rv" style="font-size:.9rem">${G.shadowKills}</span></div>
+    </div>
+    ${G.runStats.rarestFind?`<div class="lore">Rarest discovery: <b style="color:var(--gold)">${G.runStats.rarestFind}</b> (${rarities[G.runStats.rarestRarity-1]||'???'})</div>`:''}
+    <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.6rem 0">
+      ${G.victories.map(v=>`<span class="badge b-gold">${v.toUpperCase()}</span>`).join('')}
+      ${G.prestigeCount>0?`<span class="badge b-purple">Prestige x${G.prestigeCount}</span>`:''}
+    </div>
+    <div style="font-family:var(--fm);font-size:.42rem;color:var(--parchment3);margin-top:.4rem">
+      Seed: ${G.worldSeed}${G.dailySeed?' (DAILY)':''} · Season: ${SEASONS[G.season]} · Crisis: ${G.crisis}%
+    </div>
+    <div style="font-family:var(--fm);font-size:.4rem;color:var(--parchment3);margin-top:.2rem">
+      Journal: ${META.totalDisc}/${Object.keys(B).length} · Lifetime plants: ${META.totalPlants}
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:.8rem" onclick="closeModal('runsummary-modal')">Continue</button>`;
+  openModal('runsummary-modal');
+}
+
+// ══════════════════════════════════════════════════════════
+//  DISCOVERY OVERLAY (pause + animation)
+// ══════════════════════════════════════════════════════════
+function showDiscoveryOverlay(plant){
+  const el=document.getElementById('discovery-overlay');
+  const rarities=['Common','Uncommon','Rare','Epic','Legendary','Mythic'];
+  el.querySelector('#discovery-content').innerHTML=`
+    <div style="font-size:3rem;margin-bottom:.4rem;filter:drop-shadow(0 0 20px ${plant.col||'#c8a840'})">${plant.e}</div>
+    <div style="font-family:var(--fd);font-size:1.1rem;color:var(--gold);letter-spacing:.08em;text-shadow:0 0 20px rgba(200,168,64,.4)">${plant.n||plant.name}</div>
+    <div style="font-family:var(--fm);font-size:.5rem;color:var(--parchment3);margin-top:.2rem">${rarities[plant.r-1]||'???'} ${plant.type}</div>
+    ${plant.sci?`<div style="font-style:italic;font-size:.55rem;color:var(--parchment2);margin-top:.3rem">${plant.sci}</div>`:''}
+    ${plant.flavor?`<div class="lore" style="margin-top:.5rem;max-width:320px">"${plant.flavor}"</div>`:''}
+    <div style="font-family:var(--fd);font-size:.55rem;color:var(--gold);margin-top:.4rem;letter-spacing:.1em">NEW SPECIES DISCOVERED</div>`;
+  el.style.display='flex';
+  setTimeout(()=>{el.style.display='none'},2000);
+}
+
+// ══════════════════════════════════════════════════════════
+//  ONBOARDING (first-5-minutes guided flow)
+// ══════════════════════════════════════════════════════════
+let onboardStep=0;
+function startOnboarding(){
+  onboardStep=1;showOnboardTip()
+}
+function showOnboardTip(){
+  const tips=[
+    null,
+    'Walk with WASD or tap to move. Explore the world around you!',
+    'Walk near plants to auto-harvest them. Plants restore hunger!',
+    'Press TAB to open the craft menu. Build structures and fuse creatures!',
+    'Open the Cauldron to fuse 2+ plants into living creatures!',
+    'Beware the night! Stay near the campfire to keep your sanity.',
+    'Check your Botanical Journal to track all discoveries across runs!'
+  ];
+  if(onboardStep>0&&onboardStep<tips.length){
+    toast(tips[onboardStep],'info');
+    onboardStep++
+  }
+}
+// Trigger next onboard step based on game events
+function checkOnboard(){
+  if(META.totalRuns>1)return;
+  if(onboardStep===2&&G.runStats.plantsCollected>=1)showOnboardTip();
+  if(onboardStep===3&&G.runStats.plantsCollected>=3)showOnboardTip();
+  if(onboardStep===4&&G.craftOpen)showOnboardTip();
+  if(onboardStep===5&&G.creatures.length>=1)showOnboardTip();
+  if(onboardStep===6&&G.nightsSurvived>=1)showOnboardTip();
+}
+
+// ══════════════════════════════════════════════════════════
+//  13. SAVE / LOAD
+// ══════════════════════════════════════════════════════════
+function saveGame(){try{const s={...G};s.disc=[...G.disc];s.achieved=[...G.achieved];s.exploredTiles=[...G.exploredTiles].slice(0,5000);s.corruptionTiles=[...G.corruptionTiles];s.triedFusions=[...G.triedFusions];delete s.keys;delete s.nearObject;delete s.discoveryPlant;localStorage.setItem('verdant_save',JSON.stringify(s));saveMeta();console.log('Saved')}catch(e){}}
+function loadGame(){try{const d=localStorage.getItem('verdant_save');if(!d){toast('No save found','er');return}const s=JSON.parse(d);Object.assign(G,s);G.disc=new Set(s.disc||[]);G.achieved=new Set(s.achieved||[]);G.exploredTiles=new Set(s.exploredTiles||[]);G.corruptionTiles=new Set(s.corruptionTiles||[]);G.triedFusions=new Set(s.triedFusions||[]);G.keys={};G.companions=s.companions||[];G.runStats=s.runStats||{plantsCollected:0,rarestFind:'',rarestRarity:0,biomesExplored:new Set(),fusionsTried:0,fusionsSucceeded:0,startTime:Date.now()};updateRes();renderHotbar();toast('Game loaded!','ok')}catch(e){toast('Load failed','er')}}
 
 // ══════════════════════════════════════════════════════════
 //  UI
 // ══════════════════════════════════════════════════════════
-function updateRes(){const tp=Object.values(G.inv).reduce((a,b)=>a+b,0);document.getElementById('res-seeds').textContent=G.seeds;document.getElementById('res-spores').textContent=G.spores;document.getElementById('res-plants').textContent=tp;document.getElementById('res-creatures').textContent=G.creatures.length}
+function updateRes(){const tp=Object.values(G.inv).reduce((a,b)=>a+b,0);META.totalPlants=Math.max(META.totalPlants||0,tp);document.getElementById('res-seeds').textContent=G.seeds;document.getElementById('res-spores').textContent=G.spores;document.getElementById('res-plants').textContent=tp;document.getElementById('res-creatures').textContent=G.creatures.length;checkOnboard()}
 function renderHotbar(){document.getElementById('hotbar').innerHTML=G.hotbar.map((id,i)=>{const p=id?B[id]:null,q=id?(G.inv[id]||0):0;return`<div class="hotbar-slot${i===G.selSlot?' selected':''}" onclick="G.selSlot=${i};renderHotbar()"><span class="slot-key">${i+1}</span>${p?`<span class="slot-icon">${p.e}</span>${q?`<span class="slot-qty">×${q}</span>`:''}`:''}</div>`}).join('')}
 function toggleCraft(){G.craftOpen=!G.craftOpen;document.getElementById('craft-sidebar').classList.toggle('open',G.craftOpen);if(G.craftOpen)renderCraftBar()}
 function closeCraft(){G.craftOpen=false;document.getElementById('craft-sidebar').classList.remove('open')}
@@ -1794,10 +2144,14 @@ ${G.districts.filter(d=>d.built).map(d=>`<div class="craft-item" style="opacity:
 <div class="craft-item" onclick="openModal('worlds-modal');renderWorlds()"><div class="ci-icon">🌍</div><div class="ci-info"><div class="ci-name">Worlds</div></div></div>
 <div class="craft-item" onclick="openModal('creatures-modal');renderCreatures()"><div class="ci-icon">🐾</div><div class="ci-info"><div class="ci-name">Creatures (${G.creatures.length})</div></div></div>
 <div class="craft-item" onclick="openModal('inv-modal');renderInv()"><div class="ci-icon">🎒</div><div class="ci-info"><div class="ci-name">Inventory</div></div></div>
+<div class="craft-item" onclick="openModal('journal-modal');renderJournal()"><div class="ci-icon">📖</div><div class="ci-info"><div class="ci-name">Journal (${META.totalDisc})</div></div></div>
+<div class="craft-item" onclick="showRunSummary()"><div class="ci-icon">📊</div><div class="ci-info"><div class="ci-name">Run Stats</div></div></div>
+<div class="craft-section-title">💰 Resources</div>
+<div style="font-family:var(--fm);font-size:.45rem;color:var(--parchment2);padding:0 .4rem">🧪 Compost: ${G.compost} · Essence: ${G.essence}${META.streak>0?' · Streak: '+META.streak+'d':''}${G.dailySeed?' · Daily Seed':''}</div>
 ${G.victories.length?`<div class="craft-section-title">🌀 Prestige</div><div class="craft-item" style="border-color:var(--mystic)" onclick="doPrestige()"><div class="ci-icon">🌀</div><div class="ci-info"><div class="ci-name">Ascend (+15%)</div></div></div>`:''}
 <div class="craft-section-title">⏭ Turn</div><div class="craft-item" onclick="endTurn()"><div class="ci-icon">⏭</div><div class="ci-info"><div class="ci-name">End Turn</div></div></div>
 <div class="craft-item" onclick="saveGame();toast('Saved!','ok')"><div class="ci-icon">💾</div><div class="ci-info"><div class="ci-name">Save Game</div></div></div>
-<div style="font-family:var(--fm);font-size:.4rem;color:var(--parchment3);margin-top:.5rem">Seed: ${G.worldSeed}</div>`}
+<div style="font-family:var(--fm);font-size:.4rem;color:var(--parchment3);margin-top:.5rem">Seed: ${G.worldSeed}${G.dailySeed?' (DAILY)':''}</div>`}
 
 // 15. Inventory with sorting
 function renderInv(){
@@ -1860,17 +2214,31 @@ function getShareURL(){return window.location.origin+window.location.pathname+'?
 // ══════════════════════════════════════════════════════════
 //  START
 // ════════════════════════���═════════════════════════════════
-function startGame(){
+function startGame(useDaily=false){
   document.getElementById('title-screen').classList.add('hidden');document.getElementById('game-screen').classList.add('active');
+  // Daily seed system
+  if(useDaily){G.worldSeed=getDailySeed();G.dailySeed=true}
+  // Streak tracking
+  const today=new Date().toDateString();
+  if(META.lastPlayDate){
+    const last=new Date(META.lastPlayDate);const diff=Math.floor((new Date(today)-last)/(1000*60*60*24));
+    if(diff===1)META.streak++;
+    else if(diff>1)META.streak=1;
+  } else META.streak=1;
+  META.lastPlayDate=today;META.totalRuns++;saveMeta();
+  G.runStats.startTime=Date.now();
+
   initAudio();initCanvas();generateWorld();renderHotbar();updateRes();
-  // Init tap-to-move controls after game screen is visible
   setTimeout(initTouchControls,100);
   // Try load
-  const save=localStorage.getItem('verdant_save');if(save){try{const s=JSON.parse(save);if(s.worldSeed===G.worldSeed){Object.assign(G,s);G.disc=new Set(s.disc||[]);G.achieved=new Set(s.achieved||[]);G.exploredTiles=new Set(s.exploredTiles||[]);G.corruptionTiles=new Set(s.corruptionTiles||[]);G.keys={};G.companions=s.companions||[];updateRes();renderHotbar();toast('Save loaded!','ok')}}catch(e){}}
+  const save=localStorage.getItem('verdant_save');if(save&&!useDaily){try{const s=JSON.parse(save);if(s.worldSeed===G.worldSeed){Object.assign(G,s);G.disc=new Set(s.disc||[]);G.achieved=new Set(s.achieved||[]);G.exploredTiles=new Set(s.exploredTiles||[]);G.corruptionTiles=new Set(s.corruptionTiles||[]);G.triedFusions=new Set(s.triedFusions||[]);G.keys={};G.companions=s.companions||[];updateRes();renderHotbar();toast('Save loaded!','ok')}}catch(e){}}
   lastTime=performance.now();requestAnimationFrame(gameLoop);startAmbient();
   const isMobile='ontouchstart'in window;
-  setTimeout(()=>toast(isMobile?'Tap to move · Double-tap to interact · Use buttons for menus':'WASD move · E interact · TAB craft · Scroll zoom','info'),500);
-  setTimeout(()=>toast('The mycelium web stirs beneath your feet...','ok'),2000);
+  setTimeout(()=>toast(isMobile?'Tap to move · Tap objects to interact · Use buttons for menus':'WASD move · E interact · TAB craft · Scroll zoom','info'),500);
+  if(META.streak>1)setTimeout(()=>toast(`Streak: ${META.streak} days! +${Math.floor(META.streak*2)}% find rate`,'gd'),1500);
+  setTimeout(()=>toast('The mycelium web stirs beneath your feet...','ok'),2500);
+  // Onboarding: guided first steps for new players
+  if(META.totalRuns<=1)setTimeout(startOnboarding,3000);
 }
 try{renderCodex()}catch(e){console.log('Codex init:',e)}
 console.log('VERDANT loaded.',Object.keys(B).length,'plants');
