@@ -352,7 +352,7 @@ weather:'clear',weatherTimer:0,weatherIntensity:0,
 tutStep:0,tutDone:false,companions:[],
 worldSeed:Math.floor(Math.random()*999999),invSort:'name'};
 
-const TILE=48;let canvas,ctx,W,H,animFrame=0,lastTime=0,audioCtx=null;
+const TILE=48;let canvas,ctx,W,H,animFrame=0,lastTime=0,audioCtx=null,screenShake=0;
 // Spatial grid for fast lookups (cell size 200px)
 const CELL=200;let spatialGrid={};
 function rebuildSpatial(){spatialGrid={};G.worldObjects.forEach((o,i)=>{const k=Math.floor(o.x/CELL)+','+Math.floor(o.y/CELL);(spatialGrid[k]=spatialGrid[k]||[]).push(o)})}
@@ -604,6 +604,58 @@ function drawDSStructure(c,x,y,type,glow,glowR){
       // Skull
       _c.fillStyle='#d4c4a0';_c.beginPath();_c.arc(cx,base-20,5,0,Math.PI*2);_c.fill();_c.strokeStyle='#1a1208';_c.lineWidth=1.5;_c.stroke();
       _c.fillStyle='#0a0806';_c.beginPath();_c.arc(cx-2,base-21,1.2,0,Math.PI*2);_c.fill();_c.beginPath();_c.arc(cx+2,base-21,1.2,0,Math.PI*2);_c.fill()
+    } else if(type==='ruin'){
+      // Ancient stone pillars
+      _c.fillStyle='#6a6a68';_c.strokeStyle='#1a1208';_c.lineWidth=2;
+      // Left pillar (broken)
+      _c.fillRect(cx-12,base-20,5,20);_c.strokeRect(cx-12,base-20,5,20);
+      // Right pillar
+      _c.fillRect(cx+7,base-26,5,26);_c.strokeRect(cx+7,base-26,5,26);
+      // Lintel (cracked)
+      _c.fillRect(cx-14,base-24,14,4);_c.strokeRect(cx-14,base-24,14,4);
+      // Vines
+      _c.strokeStyle='#3a6a20';_c.lineWidth=1.5;
+      _c.beginPath();_c.moveTo(cx+9,base-26);_c.quadraticCurveTo(cx+14,base-18,cx+10,base-10);_c.stroke();
+      // Glow rune
+      _c.fillStyle='rgba(120,120,180,.4)';_c.beginPath();_c.arc(cx,base-12,4,0,Math.PI*2);_c.fill()
+    } else if(type==='shrine'){
+      // Stone shrine with torii-like gate
+      _c.fillStyle='#8a3020';_c.strokeStyle='#1a1208';_c.lineWidth=2;
+      // Posts
+      _c.fillRect(cx-12,base-22,4,22);_c.strokeRect(cx-12,base-22,4,22);
+      _c.fillRect(cx+8,base-22,4,22);_c.strokeRect(cx+8,base-22,4,22);
+      // Top beam
+      _c.fillRect(cx-15,base-24,30,3);_c.strokeRect(cx-15,base-24,30,3);
+      // Offering bowl
+      _c.fillStyle='#5a5a58';_c.beginPath();_c.arc(cx,base-2,5,Math.PI,0);_c.fill();_c.stroke();
+      // Candle glow
+      _c.fillStyle='rgba(255,200,60,.3)';_c.beginPath();_c.arc(cx,base-6,6,0,Math.PI*2);_c.fill()
+    } else if(type==='grove'){
+      // Sacred tree stump with mushroom ring
+      _c.fillStyle='#4a3820';_c.strokeStyle='#1a1208';_c.lineWidth=2;
+      _c.beginPath();_c.ellipse(cx,base-4,10,5,0,0,Math.PI*2);_c.fill();_c.stroke();
+      // Tree rings
+      _c.strokeStyle='rgba(0,0,0,.15)';_c.lineWidth=.5;
+      for(let i=2;i<9;i+=2){_c.beginPath();_c.arc(cx,base-4,i,0,Math.PI*2);_c.stroke()}
+      // Tiny mushrooms around
+      _c.fillStyle='#c08040';
+      for(let i=0;i<5;i++){const a=(i/5)*Math.PI*2;const mx=cx+Math.cos(a)*14,my=base-2+Math.sin(a)*5;
+        _c.beginPath();_c.ellipse(mx,my-3,3,2,0,0,Math.PI*2);_c.fill()}
+      // Green glow
+      _c.fillStyle='rgba(90,170,48,.2)';_c.beginPath();_c.arc(cx,base-4,16,0,Math.PI*2);_c.fill()
+    } else if(type==='well'){
+      // Stone well
+      _c.fillStyle='#6a6a60';_c.strokeStyle='#1a1208';_c.lineWidth=2;
+      _c.beginPath();_c.ellipse(cx,base-4,11,6,0,0,Math.PI*2);_c.fill();_c.stroke();
+      // Inner dark
+      _c.fillStyle='#1a1a20';_c.beginPath();_c.ellipse(cx,base-4,7,4,0,0,Math.PI*2);_c.fill();
+      // Posts and roof
+      _c.fillStyle='#4a3a28';_c.fillRect(cx-10,base-22,3,18);_c.fillRect(cx+7,base-22,3,18);
+      _c.strokeRect(cx-10,base-22,3,18);_c.strokeRect(cx+7,base-22,3,18);
+      // Roof
+      _c.beginPath();_c.moveTo(cx-12,base-22);_c.lineTo(cx,base-28);_c.lineTo(cx+12,base-22);_c.closePath();_c.fill();_c.stroke();
+      // Water glint
+      _c.fillStyle='rgba(80,130,180,.3)';_c.beginPath();_c.arc(cx-2,base-5,2,0,Math.PI*2);_c.fill()
     } else {
       // Generic structure: wooden sign/post
       _c.fillStyle='#4a3a28';_c.lineWidth=2;
@@ -665,7 +717,7 @@ function renderParticles(c){
 function spawnAmbientParticles(){
   if(animFrame%20===0){
     // Fireflies at night
-    if(G.isNight&&particles.filter(p=>p.type==='firefly').length<15){
+    if(G.isNight&&particles.reduce((c,p)=>c+(p.type==='firefly'),0)<15){
       const angle=Math.random()*Math.PI*2,dist=100+Math.random()*250;
       emitParticle(G.px+Math.cos(angle)*dist,G.py+Math.sin(angle)*dist,'firefly')
     }
@@ -695,6 +747,7 @@ function spawnAmbientParticles(){
 let lightCanvas,lightCtx;
 function initLighting(){
   lightCanvas=document.getElementById('lightCanvas');
+  if(!lightCanvas)return;
   lightCtx=lightCanvas.getContext('2d');
   resizeLight()
 }
@@ -887,6 +940,31 @@ function generateWorld(){
     else if(r<bd.td+.04)G.worldObjects.push({type:'rock',x:wx,y:wy,emoji:'🪨',name:'Boulder',solid:true});
     else if(r<bd.td+.12){const pool=[...(bd.plants||[]),...GLOBALS].filter(id=>B[id]);if(pool.length){const pid=pool[Math.floor(Math.random()*pool.length)],p=B[pid];G.worldObjects.push({type:'plant',x:wx,y:wy,emoji:p.e,name:p.n||p.name,plantId:pid,interactable:true,interact:'harvest',harvested:false,rarity:p.r,isMushroom:p.type==='mushroom',glow:p.type==='mushroom'?'#c88030':null,glowR:p.type==='mushroom'?35:0,regrowTimer:0});}}
   }
+  // Points of interest — ruins, shrines, rare groves
+  const poiTypes=[
+    {type:'ruin',name:'Ancient Ruins',interact:'research',glow:'#8080a0',glowR:60},
+    {type:'shrine',name:'Forest Shrine',interact:'campfire',glow:'#c8a840',glowR:80},
+    {type:'grove',name:'Sacred Grove',interact:'harvest',glow:'#5aaa30',glowR:70},
+    {type:'well',name:'Wishing Well',interact:'chest',glow:'#5080a0',glowR:50}
+  ];
+  for(let i=0;i<8;i++){
+    const angle=Math.random()*Math.PI*2,dist=600+Math.random()*3000;
+    const px=G.px+Math.cos(angle)*dist,py=G.py+Math.sin(angle)*dist;
+    if(px<TILE||px>(W-1)*TILE||py<TILE||py>(H-1)*TILE)continue;
+    const poi=poiTypes[i%poiTypes.length];
+    G.worldObjects.push({...poi,x:px,y:py,emoji:'',interactable:true,harvested:false});
+    // Surround POI with extra plants
+    for(let j=0;j<6;j++){
+      const pa=Math.random()*Math.PI*2,pd=40+Math.random()*60;
+      const ppx=px+Math.cos(pa)*pd,ppy=py+Math.sin(pa)*pd;
+      const ptx=Math.floor(ppx/TILE),pty=Math.floor(ppy/TILE);
+      if(ptx<0||ptx>=W||pty<0||pty>=H)continue;
+      const biome=G.worldTiles[pty*W+ptx],bd=BIOME_DATA[biome];if(!bd)continue;
+      const pool=[...(bd.plants||[]),...GLOBALS].filter(id=>B[id]&&B[id].r>=3);
+      if(pool.length){const pid=pool[Math.floor(Math.random()*pool.length)],p=B[pid];
+        G.worldObjects.push({type:'plant',x:ppx,y:ppy,emoji:p.e,name:p.n||p.name,plantId:pid,interactable:true,interact:'harvest',harvested:false,rarity:p.r,isMushroom:p.type==='mushroom',glow:p.type==='mushroom'?'#c88030':'#5a9a30',glowR:30,regrowTimer:0})}
+    }
+  }
   // 8. NPCs roaming
   RIVALS.forEach((r,i)=>{const angle=Math.random()*Math.PI*2,dist=800+Math.random()*2000;G.npcs.push({...r,x:G.px+Math.cos(angle)*dist,y:G.py+Math.sin(angle)*dist,idx:i,moveTimer:0,moveDir:Math.random()*Math.PI*2});});
   rebuildSpatial();
@@ -943,7 +1021,10 @@ function update(dt){
   if(wasNight&&!G.isNight){G.nightsSurvived++;playSound('night')}
   if(!wasNight&&G.isNight)playSound('night');
   const nightAlpha=G.isNight?Math.min(.65,(.3-dayPhase)*3):0;
-  document.getElementById('nightOverlay').style.background=nightAlpha>0?`rgba(10,8,20,${nightAlpha})`:'transparent';
+  const duskAlpha=(!G.isNight&&dayPhase<.4)?(.4-dayPhase)*1.5:0;
+  if(nightAlpha>0)document.getElementById('nightOverlay').style.background=`rgba(8,6,18,${nightAlpha})`;
+  else if(duskAlpha>0)document.getElementById('nightOverlay').style.background=`rgba(40,15,10,${duskAlpha*.15})`;
+  else document.getElementById('nightOverlay').style.background='transparent';
   document.getElementById('clock-day').style.setProperty('--day-angle',(G.dayTime%1)*360+'deg');
   document.getElementById('clock-label').textContent=G.isNight?'NIGHT':'DAY';
   // Seasons
@@ -964,7 +1045,7 @@ function update(dt){
   for(let i=G.enemies.length-1;i>=0;i--){
     const e=G.enemies[i],dx=G.px-e.x,dy=G.py-e.y,dist=Math.sqrt(dx*dx+dy*dy);
     if(dist<300){e.x+=dx/dist*e.spd*60*dt;e.y+=dy/dist*e.spd*60*dt}
-    if(dist<30){e.attackCD-=dt;if(e.attackCD<=0){G.hp=Math.max(0,G.hp-e.dmg);G.sanity=Math.max(0,G.sanity-5);screenFlash('#4a2050');playSound('hit');e.attackCD=1.5}}
+    if(dist<30){e.attackCD-=dt;if(e.attackCD<=0){G.hp=Math.max(0,G.hp-e.dmg);G.sanity=Math.max(0,G.sanity-5);screenFlash('#4a2050');playSound('hit');screenShake=8;e.attackCD=1.5}}
     // Companion auto-fight
     for(const comp of G.companions){const cdx=comp.x-e.x,cdy=comp.y-e.y;if(Math.sqrt(cdx*cdx+cdy*cdy)<50){e.hp-=2*dt*60;if(e.hp<=0){G.enemies.splice(i,1);G.shadowKills++;G.seeds+=5;toast('Shadow destroyed! +5 seeds','ok');playSound('harvest');break}}}
   }
@@ -1031,6 +1112,8 @@ function updateWeather(){
 // ══════════════════════��═══════════════════════════════════
 function render(){
   ctx.clearRect(0,0,W,H);ctx.save();
+  // Screen shake
+  if(screenShake>0){const sx=(Math.random()-.5)*screenShake,sy=(Math.random()-.5)*screenShake;ctx.translate(sx,sy);screenShake*=.85;if(screenShake<.5)screenShake=0}
   ctx.scale(G.zoom,G.zoom);ctx.translate(-G.camX,-G.camY);
   const vw=W/G.zoom,vh=H/G.zoom;
   const viewL=G.camX-60,viewR=G.camX+vw+60,viewT=G.camY-60,viewB=G.camY+vh+60;
