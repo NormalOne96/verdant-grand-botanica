@@ -55,7 +55,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--parchment
 .btn-full{width:100%}
 #game-screen{position:fixed;inset:0;display:none;overflow:hidden}
 #game-screen.active{display:block}
-#gameCanvas{position:absolute;inset:0}
+#gameCanvas{position:absolute;inset:0;image-rendering:auto}
 .hud-survival{position:fixed;top:10px;right:10px;display:flex;gap:6px;z-index:20;pointer-events:none}
 .survival-meter{width:50px;height:50px;position:relative;pointer-events:auto}
 .survival-meter canvas{width:100%;height:100%}
@@ -362,7 +362,7 @@ cauldron:[null,null,null,null],victories:[],
 worldTiles:[],worldW:200,worldH:150,worldObjects:[],enemies:[],npcs:[],
 exploredCount:0,exploredTiles:new Set(),corruptionTiles:new Set(),
 prestigeCount:0,prestigeBonus:1,achieved:new Set(),shadowKills:0,
-camX:0,camY:0,zoom:1,keys:{},joyX:0,joyY:0,nearObject:null,craftOpen:false,
+camX:0,camY:0,zoom:1.6,keys:{},joyX:0,joyY:0,nearObject:null,craftOpen:false,
 weather:'clear',weatherTimer:0,weatherIntensity:0,
 tutStep:0,tutDone:false,companions:[],
 worldSeed:Math.floor(Math.random()*999999),invSort:'name',
@@ -837,18 +837,44 @@ function drawGroundDetail(c,tx,ty,biome){
   if(groundDetailCache[key]===undefined){
     const R=sRng(tx*7919+ty*104729);
     const details=[];
-    // Grass tufts
-    if(biome!=='desert'&&biome!=='mountain'&&biome!=='tundra'){
-      const count=Math.floor(R()*4);
+    // Dense grass — more organic coverage
+    if(biome!=='desert'&&biome!=='mountain'){
+      const count=2+Math.floor(R()*5);
+      const baseCol=biome==='toxic'?[74,40,48]:biome==='tundra'?[60,70,65]:biome==='swamp'?[35,60,30]:biome==='jungle'?[30,70,25]:[50,80,30];
       for(let i=0;i<count;i++){
-        details.push({type:'grass',x:R()*TILE,y:R()*TILE,h:3+R()*4,col:biome==='toxic'?'#4a2830':'#3a5a20'})
+        const shade=.7+R()*.6;
+        details.push({type:'grass',x:R()*TILE,y:R()*TILE,h:2+R()*5,
+          col:`rgb(${baseCol[0]*shade|0},${baseCol[1]*shade|0},${baseCol[2]*shade|0})`})
       }
     }
-    // Pebbles
-    if(R()>.7){details.push({type:'pebble',x:R()*TILE,y:R()*TILE,r:1+R()*1.5})}
-    // Flowers (plains/forest)
-    if((biome==='plains'||biome==='forest')&&R()>.8){
-      details.push({type:'flower',x:R()*TILE,y:R()*TILE,col:['#e06080','#e8c840','#8080e0','#e0a0c0'][Math.floor(R()*4)]})
+    // Desert has sand ripples
+    if(biome==='desert'&&R()>.4){
+      details.push({type:'ripple',x:R()*TILE,y:R()*TILE,w:8+R()*12})
+    }
+    // Tundra has snow patches
+    if(biome==='tundra'&&R()>.3){
+      details.push({type:'snow',x:R()*TILE,y:R()*TILE,r:4+R()*6})
+    }
+    // Pebbles (more frequent)
+    if(R()>.5){const cnt=1+Math.floor(R()*3);for(let i=0;i<cnt;i++)
+      details.push({type:'pebble',x:R()*TILE,y:R()*TILE,r:.8+R()*1.8})}
+    // Flowers (plains/forest/jungle)
+    if((biome==='plains'||biome==='forest'||biome==='jungle')&&R()>.6){
+      const cnt=1+Math.floor(R()*3);
+      for(let i=0;i<cnt;i++)details.push({type:'flower',x:R()*TILE,y:R()*TILE,
+        col:['#e06080','#e8c840','#8080e0','#e0a0c0','#f0b060','#80c0e0'][Math.floor(R()*6)]})
+    }
+    // Swamp has puddles
+    if(biome==='swamp'&&R()>.5){
+      details.push({type:'puddle',x:R()*TILE,y:R()*TILE,r:3+R()*5})
+    }
+    // Mountain has cracks
+    if(biome==='mountain'&&R()>.5){
+      details.push({type:'crack',x:R()*TILE,y:R()*TILE,a:R()*Math.PI,l:4+R()*8})
+    }
+    // Coastal has shells/seaweed
+    if(biome==='coastal'&&R()>.5){
+      details.push({type:'shell',x:R()*TILE,y:R()*TILE})
     }
     groundDetailCache[key]=details
   }
@@ -858,21 +884,133 @@ function drawGroundDetail(c,tx,ty,biome){
     if(d.type==='grass'){
       c.strokeStyle=d.col;c.lineWidth=1;c.lineCap='round';
       const gx=bx+d.x,gy=by+d.y;
-      for(let j=-1;j<=1;j++){c.beginPath();c.moveTo(gx+j*2,gy);c.lineTo(gx+j*3,gy-d.h);c.stroke()}
+      const sway=Math.sin(animFrame*.02+gx*.1)*.8;
+      for(let j=-1;j<=1;j++){c.beginPath();c.moveTo(gx+j*2,gy);c.lineTo(gx+j*2.5+sway,gy-d.h);c.stroke()}
     } else if(d.type==='pebble'){
-      c.fillStyle='rgba(100,90,75,.3)';c.beginPath();c.arc(bx+d.x,by+d.y,d.r,0,Math.PI*2);c.fill()
+      c.fillStyle='rgba(90,80,65,.25)';c.beginPath();c.ellipse(bx+d.x,by+d.y,d.r,d.r*.7,.3,0,Math.PI*2);c.fill()
     } else if(d.type==='flower'){
-      c.fillStyle=d.col;c.beginPath();c.arc(bx+d.x,by+d.y,1.5,0,Math.PI*2);c.fill();
-      c.strokeStyle='#3a5a20';c.lineWidth=.5;c.beginPath();c.moveTo(bx+d.x,by+d.y+1.5);c.lineTo(bx+d.x,by+d.y+4);c.stroke()
+      // Tiny flower with petals
+      const fx=bx+d.x,fy=by+d.y;
+      c.strokeStyle='rgba(50,80,30,.5)';c.lineWidth=.7;c.beginPath();c.moveTo(fx,fy+1.5);c.lineTo(fx,fy+5);c.stroke();
+      c.fillStyle=d.col;
+      for(let p=0;p<4;p++){const a=(p/4)*Math.PI*2;c.beginPath();c.arc(fx+Math.cos(a)*1.5,fy+Math.sin(a)*1.5,1,0,Math.PI*2);c.fill()}
+      c.fillStyle='#e8d040';c.beginPath();c.arc(fx,fy,.8,0,Math.PI*2);c.fill()
+    } else if(d.type==='ripple'){
+      c.strokeStyle='rgba(140,120,80,.12)';c.lineWidth=.5;
+      const rx=bx+d.x,ry=by+d.y;
+      for(let i=0;i<3;i++){c.beginPath();c.moveTo(rx-d.w/2,ry+i*3);c.quadraticCurveTo(rx,ry+i*3-2,rx+d.w/2,ry+i*3);c.stroke()}
+    } else if(d.type==='snow'){
+      c.fillStyle='rgba(220,230,240,.2)';c.beginPath();c.ellipse(bx+d.x,by+d.y,d.r,d.r*.6,0,0,Math.PI*2);c.fill()
+    } else if(d.type==='puddle'){
+      c.fillStyle='rgba(30,50,60,.2)';c.beginPath();c.ellipse(bx+d.x,by+d.y,d.r,d.r*.5,0,0,Math.PI*2);c.fill();
+      // Water shimmer
+      c.fillStyle='rgba(80,120,140,.1)';c.beginPath();c.ellipse(bx+d.x-1,by+d.y-1,d.r*.4,d.r*.2,0,0,Math.PI*2);c.fill()
+    } else if(d.type==='crack'){
+      c.strokeStyle='rgba(60,55,45,.15)';c.lineWidth=.7;
+      const cx2=bx+d.x,cy2=by+d.y;
+      c.beginPath();c.moveTo(cx2,cy2);c.lineTo(cx2+Math.cos(d.a)*d.l,cy2+Math.sin(d.a)*d.l);c.stroke()
+    } else if(d.type==='shell'){
+      c.fillStyle='rgba(200,190,170,.15)';c.beginPath();c.arc(bx+d.x,by+d.y,1.5,0,Math.PI*2);c.fill()
     }
   }
 }
 
-// ── TILE COLOR VARIATION ──
+// ── SMOOTH TERRAIN SYSTEM ──
+// Pre-parse biome colors for fast blending
+const biomeRGB={};
+for(const[k,v]of Object.entries(BIOME_DATA)){
+  const c=v.col;biomeRGB[k]=[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]
+}
+biomeRGB['_corrupt']=[42,16,24];biomeRGB['_fog']=[10,8,6];
+
+// Get smoothly blended color at sub-tile precision
+function getTerrainColor(wx,wy){
+  const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);
+  if(tx<0||tx>=G.worldW||ty<0||ty>=G.worldH)return[15,12,10];
+  const idx=ty*G.worldW+tx;
+  if(!G.exploredTiles.has(idx))return[8,6,5];
+  if(G.corruptionTiles.has(idx)){
+    const n=simplex(wx*.08,wy*.08)*.15;
+    return[38+n*20,14+n*10,22+n*15]
+  }
+  const biome=G.worldTiles[idx];
+  const base=biomeRGB[biome]||[26,22,16];
+
+  // Island falloff — edges fade to dark water
+  const centerX=G.worldW*TILE/2,centerY=G.worldH*TILE/2;
+  const distFromCenter=Math.sqrt((wx-centerX)**2+(wy-centerY)**2);
+  const maxDist=Math.min(centerX,centerY)*.85;
+  const edgeFade=Math.max(0,Math.min(1,(maxDist-distFromCenter)/(maxDist*.15)));
+  if(edgeFade<1){
+    // Blend toward ocean color at edges
+    const ocean=[18,35,50];
+    const ef=edgeFade;
+    return[base[0]*ef+ocean[0]*(1-ef)|0,base[1]*ef+ocean[1]*(1-ef)|0,base[2]*ef+ocean[2]*(1-ef)|0]
+  }
+
+  // Sub-tile noise for organic variation
+  const n1=simplex(wx*.06+G.worldSeed,wy*.06)*.12;
+  const n2=simplex(wx*.15+100,wy*.15+100)*.06;
+
+  // Biome edge blending — sample neighbors and lerp
+  const fx=(wx/TILE)%1,fy=(wy/TILE)%1;
+  let r=base[0],g=base[1],b=base[2];
+
+  // Blend with adjacent biomes at edges
+  if(fx<.3||fx>.7||fy<.3||fy>.7){
+    const neighbors=[];
+    if(fx<.3&&tx>0){const nb=G.worldTiles[idx-1];if(nb!==biome){const c=biomeRGB[nb]||base;const t=(.3-fx)/.3*.4;neighbors.push([c,t])}}
+    if(fx>.7&&tx<G.worldW-1){const nb=G.worldTiles[idx+1];if(nb!==biome){const c=biomeRGB[nb]||base;const t=(fx-.7)/.3*.4;neighbors.push([c,t])}}
+    if(fy<.3&&ty>0){const nb=G.worldTiles[idx-G.worldW];if(nb!==biome){const c=biomeRGB[nb]||base;const t=(.3-fy)/.3*.4;neighbors.push([c,t])}}
+    if(fy>.7&&ty<G.worldH-1){const nb=G.worldTiles[idx+G.worldW];if(nb!==biome){const c=biomeRGB[nb]||base;const t=(fy-.7)/.3*.4;neighbors.push([c,t])}}
+    for(const[c,t]of neighbors){r+=(c[0]-r)*t;g+=(c[1]-g)*t;b+=(c[2]-b)*t}
+  }
+
+  // Apply noise
+  r=Math.max(0,Math.min(255,r+n1*40+n2*20));
+  g=Math.max(0,Math.min(255,g+n1*40+n2*20));
+  b=Math.max(0,Math.min(255,b+n1*30+n2*15));
+  return[r|0,g|0,b|0]
+}
+
+// Terrain chunk cache — render 4x4 tile chunks to offscreen canvases
+const terrainChunkCache={};const CHUNK=4;const CHUNK_PX=CHUNK*TILE;
+function getTerrainChunk(cx,cy){
+  const key=cx+','+cy;
+  if(terrainChunkCache[key])return terrainChunkCache[key];
+  const c=document.createElement('canvas');
+  c.width=CHUNK_PX;c.height=CHUNK_PX;
+  const x=c.getContext('2d');
+  const img=x.createImageData(CHUNK_PX,CHUNK_PX);
+  const d=img.data;
+  const baseX=cx*CHUNK*TILE,baseY=cy*CHUNK*TILE;
+  // Render at half resolution then scale for performance
+  const step=2;
+  for(let py=0;py<CHUNK_PX;py+=step)for(let px=0;px<CHUNK_PX;px+=step){
+    const wx=baseX+px,wy=baseY+py;
+    const[r,g,b]=getTerrainColor(wx,wy);
+    for(let sy=0;sy<step;sy++)for(let sx=0;sx<step;sx++){
+      const i=((py+sy)*CHUNK_PX+(px+sx))*4;
+      d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=255;
+    }
+  }
+  x.putImageData(img,0,0);
+  // Limit cache size
+  const keys=Object.keys(terrainChunkCache);
+  if(keys.length>200){for(let i=0;i<50;i++)delete terrainChunkCache[keys[i]]}
+  terrainChunkCache[key]=c;
+  return c;
+}
+// Invalidate chunks when corruption spreads
+function invalidateTerrainNear(tx,ty){
+  const cx=Math.floor(tx/CHUNK),cy=Math.floor(ty/CHUNK);
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)delete terrainChunkCache[(cx+dx)+','+(cy+dy)]
+}
+
 function getTileColor(biome,tx,ty,isCorrupt){
+  // Fallback for non-chunked use
   if(isCorrupt)return `rgb(${38+((tx*3+ty*7)%8)},${14+((tx*5+ty*3)%6)},${22+((tx*7+ty)%8)})`;
   const bd=BIOME_DATA[biome];if(!bd)return'#1a1610';
-  // Parse base color and add variation
   const base=bd.col;const v=((tx*13+ty*37)%16)-8;
   const r=parseInt(base.slice(1,3),16)+v;
   const g=parseInt(base.slice(3,5),16)+v;
@@ -1022,7 +1160,7 @@ function generateWorld(){
 // ══════════════════════════════════════════════════════════
 //  GAME LOOP
 // ══════════════════════════════════════════════════════════
-function initCanvas(){canvas=document.getElementById('gameCanvas');ctx=canvas.getContext('2d');resize();window.addEventListener('resize',resize);initLighting()}
+function initCanvas(){canvas=document.getElementById('gameCanvas');ctx=canvas.getContext('2d',{alpha:false});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';resize();window.addEventListener('resize',resize);initLighting()}
 function resize(){W=window.innerWidth;H=window.innerHeight;canvas.width=W;canvas.height=H;minimapDirty=true;resizeLight()}
 
 function gameLoop(ts){
@@ -1061,12 +1199,14 @@ function update(dt){
     if(nx>0&&nx<G.worldW*TILE&&ny>0&&ny<G.worldH*TILE&&!blocked){G.px=nx;G.py=ny}
     // Track explored (auto-reveal 3x3 around player)
     const ptx=Math.floor(G.px/TILE),pty=Math.floor(G.py/TILE);
-    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const idx=(pty+dy)*G.worldW+(ptx+dx);if(idx>=0&&idx<G.worldW*G.worldH)G.exploredTiles.add(idx)}
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const idx=(pty+dy)*G.worldW+(ptx+dx);if(idx>=0&&idx<G.worldW*G.worldH&&!G.exploredTiles.has(idx)){G.exploredTiles.add(idx);invalidateTerrainNear(ptx+dx,pty+dy)}}
     minimapDirty=true;
   }
-  // Smooth camera (lerp)
-  const camTarget_x=G.px-W/(2*G.zoom),camTarget_y=G.py-H/(2*G.zoom);
-  G.camX+=(camTarget_x-G.camX)*.12;G.camY+=(camTarget_y-G.camY)*.12;
+  // Smooth camera (lerp with slight lookahead in movement direction)
+  const lookAhead=20;
+  const camTarget_x=G.px-W/(2*G.zoom)+(G.vx||0)*lookAhead;
+  const camTarget_y=G.py-H/(2*G.zoom)+(G.vy||0)*lookAhead;
+  G.camX+=(camTarget_x-G.camX)*.08;G.camY+=(camTarget_y-G.camY)*.08;
   // Day/night
   G.dayTime+=dt*.008;const dayPhase=(Math.sin(G.dayTime*Math.PI*2)+1)/2;
   const wasNight=G.isNight;G.isNight=dayPhase<.3;
@@ -1240,27 +1380,39 @@ function render(){
   const vw=W/G.zoom,vh=H/G.zoom;
   const viewL=G.camX-60,viewR=G.camX+vw+60,viewT=G.camY-60,viewB=G.camY+vh+60;
 
-  // ── GROUND TILES with color variation ──
+  // ── SMOOTH TERRAIN (chunk-based with noise blending) ──
+  const scx0=Math.max(0,Math.floor(viewL/(CHUNK_PX))),scx1=Math.ceil(viewR/(CHUNK_PX));
+  const scy0=Math.max(0,Math.floor(viewT/(CHUNK_PX))),scy1=Math.ceil(viewR>0?viewB/(CHUNK_PX):0);
+  const maxCX=Math.ceil(G.worldW/CHUNK),maxCY=Math.ceil(G.worldH/CHUNK);
+  for(let cy=scy0;cy<=Math.min(scy1,maxCY-1);cy++)for(let cx=scx0;cx<=Math.min(scx1,maxCX-1);cx++){
+    // Check if any tile in this chunk is explored
+    let anyExplored=false;
+    const baseTX=cx*CHUNK,baseTY=cy*CHUNK;
+    outer:for(let dy=0;dy<CHUNK;dy++)for(let dx=0;dx<CHUNK;dx++){
+      const idx=(baseTY+dy)*G.worldW+(baseTX+dx);
+      if(idx>=0&&idx<G.worldW*G.worldH&&G.exploredTiles.has(idx)){anyExplored=true;break outer}
+    }
+    if(!anyExplored){
+      ctx.fillStyle='rgba(8,6,5,1)';ctx.fillRect(cx*CHUNK_PX,cy*CHUNK_PX,CHUNK_PX,CHUNK_PX);continue
+    }
+    const chunk=getTerrainChunk(cx,cy);
+    ctx.drawImage(chunk,cx*CHUNK_PX,cy*CHUNK_PX);
+  }
+  // Ground detail overlay (close tiles only)
   const stx=Math.max(0,Math.floor(viewL/TILE)),etx=Math.min(G.worldW-1,Math.ceil(viewR/TILE));
   const sty=Math.max(0,Math.floor(viewT/TILE)),ety=Math.min(G.worldH-1,Math.ceil(viewB/TILE));
   for(let ty=sty;ty<=ety;ty++)for(let tx=stx;tx<=etx;tx++){
-    const idx=ty*G.worldW+tx,biome=G.worldTiles[idx],bd=BIOME_DATA[biome];if(!bd)continue;
+    const idx=ty*G.worldW+tx;
+    if(!G.exploredTiles.has(idx))continue;
     const bx=tx*TILE,by=ty*TILE;
-    const isCorrupt=G.corruptionTiles.has(idx);
-    ctx.fillStyle=getTileColor(biome,tx,ty,isCorrupt);
-    ctx.fillRect(bx,by,TILE,TILE);
-    // Tile edge shading (subtle depth between biomes)
-    if(tx>0&&G.worldTiles[idx-1]!==biome){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(bx,by,2,TILE)}
-    if(ty>0&&G.worldTiles[idx-G.worldW]!==biome){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(bx,by,TILE,2)}
-    // Fog of war
-    if(!G.exploredTiles.has(idx)){ctx.fillStyle='rgba(5,4,3,.6)';ctx.fillRect(bx,by,TILE,TILE)}
-    // Ground detail (only render close tiles)
-    else if(Math.abs(tx*TILE-G.px)<vw*.6&&Math.abs(ty*TILE-G.py)<vh*.6){
+    const biome=G.worldTiles[idx];
+    // Ground detail (grass, pebbles, flowers) — only close tiles
+    if(Math.abs(tx*TILE-G.px)<vw*.5&&Math.abs(ty*TILE-G.py)<vh*.5){
       drawGroundDetail(ctx,tx,ty,biome)
     }
-    // Corruption ooze effect
-    if(isCorrupt&&G.exploredTiles.has(idx)){
-      ctx.fillStyle=`rgba(80,20,60,${.1+Math.sin(animFrame*.02+tx+ty)*.05})`;ctx.fillRect(bx,by,TILE,TILE)
+    // Corruption ooze shimmer
+    if(G.corruptionTiles.has(idx)){
+      ctx.fillStyle=`rgba(80,20,60,${.08+Math.sin(animFrame*.02+tx+ty)*.04})`;ctx.fillRect(bx,by,TILE,TILE)
     }
   }
 
@@ -1861,6 +2013,8 @@ function endTurn(){
   G.corruptionTiles.forEach(idx=>{const tx=idx%G.worldW,ty=Math.floor(idx/G.worldW);
     [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{const nx=tx+dx,ny=ty+dy;if(nx>=0&&nx<G.worldW&&ny>=0&&ny<G.worldH&&Math.random()<.08)newCorrupt.add(ny*G.worldW+nx)});
   });
+  // Invalidate terrain chunks for new corruption
+  newCorrupt.forEach(idx=>{if(!G.corruptionTiles.has(idx))invalidateTerrainNear(idx%G.worldW,Math.floor(idx/G.worldW))});
   G.corruptionTiles=newCorrupt;
   // Random events
   if(Math.random()<.25){const events=[()=>{const k=Object.keys(G.biomes)[Math.floor(Math.random()*8)];G.biomes[k]=Math.max(5,G.biomes[k]-8);toast(`${k} biome withers...`,'er')},()=>{G.seeds+=25;toast('+25 seeds from trade!','gd')},()=>{G.spores=Math.min(G.spores+2,15);toast('Spore surge! +2','info')},()=>{const gp=GLOBALS[Math.floor(Math.random()*GLOBALS.length)];G.inv[gp]=(G.inv[gp]||0)+2;G.disc.add(gp);toast(`${B[gp]?.e} ${B[gp]?.n||B[gp]?.name} sprouted!`,'ok')}];events[Math.floor(Math.random()*events.length)]()}
